@@ -26,6 +26,9 @@ const MetadataSchema = z
     registeredAt: z.string().datetime({ offset: true }).optional(),
     totalCalls: z.number().int().nonnegative().optional(),
     rating: z.number().min(0).max(5).optional(),
+    source: z.enum(["api", "mock-fallback"]).optional(),
+    note: z.string().optional(),
+    comingSoon: z.boolean().optional(),
   })
   .optional();
 

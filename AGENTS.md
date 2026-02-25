@@ -47,3 +47,8 @@ Use `pnpm` (lockfile: `pnpm-lock.yaml`).
 - Do not commit secrets; use `.env.local` for local configuration.
 - Only `NEXT_PUBLIC_*` variables are exposed to the browser—keep sensitive values server-only.
 - Validate external input (especially in API routes) with `zod`.
+
+## Provider Adapter Conventions
+
+- Dexter marketplace records currently do not provide a stable explicit id; use `encodeURIComponent(resourceUrl)` as `originalId` and `dexter:${originalId}` as unified id.
+- For best-effort providers, keep API failures non-fatal: retry once, then return mock fallback data with explicit metadata markers so downstream layers can surface degraded mode.
