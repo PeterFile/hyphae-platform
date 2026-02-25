@@ -10,7 +10,8 @@ const spaceGrotesk = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: "Hyphae — Agent Store",
-  description: "Discover AI agents across Coinbase and Thirdweb. Unified search, real-time availability, and USDC price comparison.",
+  description:
+    "Discover AI agents across Coinbase and Thirdweb. Unified search, real-time availability, and USDC price comparison.",
 };
 
 export default function RootLayout({
@@ -18,9 +19,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${spaceGrotesk.variable} antialiased`}>
-        {children}
-      </body>
+      <body className={`${spaceGrotesk.variable} antialiased`}>{children}</body>
     </html>
   );
 }
