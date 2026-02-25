@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-export const providerNames = ["coinbase", "thirdweb", "dexter", "payai"] as const;
+export const providerNames = [
+  "coinbase",
+  "thirdweb",
+  "dexter",
+  "payai",
+] as const;
 
 export const ProviderNameSchema = z.enum(providerNames);
 
