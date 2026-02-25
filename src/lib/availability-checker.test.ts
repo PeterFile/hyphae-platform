@@ -16,7 +16,9 @@ describe("availability-checker", () => {
   });
 
   it("sends HEAD with manual redirect and reports online when endpoint returns 200", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await checkEndpoint("https://example.com/health");
@@ -66,7 +68,9 @@ describe("availability-checker", () => {
   });
 
   it("treats 3xx as online and returns the original statusCode", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 302 }));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 302 }));
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await checkEndpoint("https://example.com/redirect");
@@ -76,7 +80,9 @@ describe("availability-checker", () => {
   });
 
   it("treats 5xx as online because endpoint responded", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 503 }));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 503 }));
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await checkEndpoint("https://example.com/error");
@@ -109,8 +115,11 @@ describe("availability-checker", () => {
 
         signal.addEventListener(
           "abort",
-          () => reject(new DOMException("The operation was aborted.", "AbortError")),
-          { once: true },
+          () =>
+            reject(
+              new DOMException("The operation was aborted.", "AbortError")
+            ),
+          { once: true }
         );
       });
     });
@@ -158,6 +167,8 @@ describe("availability-checker", () => {
 
     expect(maxInFlight).toBeLessThanOrEqual(2);
     expect(results).toHaveLength(urls.length);
-    expect(results.map((item) => item.statusCode)).toEqual([200, 201, 202, 203, 204, 205]);
+    expect(results.map((item) => item.statusCode)).toEqual([
+      200, 201, 202, 203, 204, 205,
+    ]);
   });
 });

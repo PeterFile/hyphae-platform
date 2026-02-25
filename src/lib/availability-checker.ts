@@ -73,7 +73,10 @@ function createLimiter(concurrency: number) {
   };
 }
 
-async function probeEndpoint(url: string, signal: AbortSignal): Promise<Response> {
+async function probeEndpoint(
+  url: string,
+  signal: AbortSignal
+): Promise<Response> {
   const headResponse = await fetch(url, {
     method: "HEAD",
     redirect: "manual",
@@ -93,7 +96,7 @@ async function probeEndpoint(url: string, signal: AbortSignal): Promise<Response
 
 export async function checkEndpoint(
   url: string,
-  timeoutMs = DEFAULT_TIMEOUT_MS,
+  timeoutMs = DEFAULT_TIMEOUT_MS
 ): Promise<AvailabilityResult> {
   const startMs = Date.now();
   const timeout = normalizeTimeout(timeoutMs);
@@ -117,13 +120,15 @@ export async function checkEndpoint(
 
 export async function checkMultiple(
   urls: string[],
-  concurrency = DEFAULT_CONCURRENCY,
+  concurrency = DEFAULT_CONCURRENCY
 ): Promise<AvailabilityResult[]> {
   if (urls.length === 0) {
     return [];
   }
 
-  const limit = createLimiter(Math.min(normalizeConcurrency(concurrency), urls.length));
+  const limit = createLimiter(
+    Math.min(normalizeConcurrency(concurrency), urls.length)
+  );
   const checks = urls.map((url) => limit(() => checkEndpoint(url)));
   const settled = await Promise.allSettled(checks);
 
@@ -140,4 +145,3 @@ export async function checkMultiple(
     };
   });
 }
-
