@@ -29,8 +29,8 @@ Use `pnpm` (lockfile: `pnpm-lock.yaml`).
 
 ## Testing Guidelines
 
-- No dedicated test runner is set up yet.
-- Minimum local checks before a PR: `pnpm lint` and `pnpm build`.
+- Unit tests use `vitest` (Node environment), focused on `src/lib/**`.
+- Minimum local checks before a PR: `pnpm test`, `pnpm lint`, and `pnpm build`.
 
 ## Commit & Pull Request Guidelines
 
