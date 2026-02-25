@@ -33,6 +33,12 @@ Use `pnpm` (lockfile: `pnpm-lock.yaml`).
 - Minimum local checks before a PR: `pnpm test`, `pnpm lint`, and `pnpm build`.
 - With ESLint 9 + Next 15 flat config, use `FlatCompat` in `eslint.config.mjs` for `next/core-web-vitals` and `next/typescript`; ignore generated files like `.next/**` and `next-env.d.ts`.
 
+## Provider Contracts
+
+- `ProviderAdapter.search()` / `getById()` should return normalized `UnifiedAgent` objects; provider-specific raw payload types stay internal to each adapter.
+- Canonical `SearchFilters.sort` values are `price_asc`, `price_desc`, `relevance`, and `availability`.
+- Registry aggregation should return partial successes with `{ results, errors }` instead of throwing when one upstream provider fails.
+
 ## Commit & Pull Request Guidelines
 
 - Commit messages follow Conventional Commits (e.g., `chore: scaffold ...`, `feat: ...`, `fix: ...`).

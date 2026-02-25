@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { UnifiedAgent } from "@/lib/unified-schema";
 
 export const providerNames = [
   "coinbase",
@@ -17,44 +18,10 @@ export type SearchFilters = {
   category?: string;
   minPrice?: number;
   maxPrice?: number;
-  sort?: "price_asc" | "price_desc" | "name" | "rating";
+  sort?: "price_asc" | "price_desc" | "relevance" | "availability";
   page?: number;
   pageSize?: number;
 };
-
-type CoinbaseProviderAgent = {
-  provider: "coinbase";
-  agent: {
-    id: string;
-  };
-};
-
-type ThirdwebProviderAgent = {
-  provider: "thirdweb";
-  agent: {
-    id: string;
-  };
-};
-
-type DexterProviderAgent = {
-  provider: "dexter";
-  agent: {
-    id: string;
-  };
-};
-
-type PayaiProviderAgent = {
-  provider: "payai";
-  agent: {
-    id: string;
-  };
-};
-
-export type ProviderAgent =
-  | CoinbaseProviderAgent
-  | ThirdwebProviderAgent
-  | DexterProviderAgent
-  | PayaiProviderAgent;
 
 export type AvailabilityResult = {
   isOnline: boolean;
@@ -63,9 +30,16 @@ export type AvailabilityResult = {
   statusCode: number;
 };
 
+export type ProviderError = {
+  provider: ProviderName;
+  type: "timeout" | "adapter_error";
+  message: string;
+  cause?: unknown;
+};
+
 export interface ProviderAdapter {
   readonly name: ProviderName;
-  search(query: string, filters?: SearchFilters): Promise<ProviderAgent[]>;
-  getById(id: string): Promise<ProviderAgent | null>;
+  search(query: string, filters?: SearchFilters): Promise<UnifiedAgent[]>;
+  getById(id: string): Promise<UnifiedAgent | null>;
   checkAvailability(endpointUrl: string): Promise<AvailabilityResult>;
 }
