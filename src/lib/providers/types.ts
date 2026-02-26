@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { UnifiedAgent } from "@/lib/unified-schema";
+
 export const providerNames = [
   "coinbase",
   "thirdweb",
@@ -38,9 +40,7 @@ type ThirdwebProviderAgent = {
 
 type DexterProviderAgent = {
   provider: "dexter";
-  agent: {
-    id: string;
-  };
+  agent: UnifiedAgent;
 };
 
 type PayaiProviderAgent = {
