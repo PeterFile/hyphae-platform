@@ -3,6 +3,7 @@
 ## Project Structure & Module Organization
 
 - `src/app/`: Next.js App Router routes (UI) and API routes under `src/app/api/**/route.ts`.
+- `src/app/api/**/route.ts` 只能导出 Next.js 认可的 route 字段（如 `GET`/`POST`）；可测试的辅助逻辑放到同级 `handler.ts` 等文件。
 - `src/components/`: reusable UI components (keep generic, no route-specific logic).
 - `src/hooks/`: shared React hooks.
 - `src/lib/`: shared utilities (API clients, validators, helpers).
