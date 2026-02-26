@@ -23,7 +23,6 @@ export type SearchFilters = {
   pageSize?: number;
 };
 
-
 export type AvailabilityResult = {
   isOnline: boolean;
   lastChecked: string;
