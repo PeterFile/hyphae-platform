@@ -3,7 +3,6 @@ import { normalizeToUsdcCents } from "@/lib/price-normalizer";
 import type {
   AvailabilityResult,
   ProviderAdapter,
-  ProviderAgent,
   SearchFilters,
 } from "@/lib/providers/types";
 import { UnifiedAgentSchema, type UnifiedAgent } from "@/lib/unified-schema";
@@ -92,13 +91,6 @@ function parseProgramAccounts(payload: unknown): ProgramAccount[] | null {
   return accounts;
 }
 
-function toProviderAgent(agent: UnifiedAgent): ProviderAgent {
-  return {
-    provider: "payai",
-    agent: { id: agent.originalId },
-  };
-}
-
 function normalizeSearchText(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -128,7 +120,7 @@ export class PayAIAdapter implements ProviderAdapter {
   async search(
     query: string,
     filters?: SearchFilters
-  ): Promise<ProviderAgent[]> {
+  ): Promise<UnifiedAgent[]> {
     if (!this.shouldIncludeProvider(filters?.provider)) {
       return [];
     }
@@ -140,10 +132,10 @@ export class PayAIAdapter implements ProviderAdapter {
         ? agents
         : agents.filter((agent) => this.matchesQuery(agent, normalizedQuery));
 
-    return filteredAgents.map(toProviderAgent);
+    return filteredAgents;
   }
 
-  async getById(id: string): Promise<ProviderAgent | null> {
+  async getById(id: string): Promise<UnifiedAgent | null> {
     const lookupId = normalizeLookupId(id);
     if (lookupId === "") {
       return null;
@@ -156,7 +148,7 @@ export class PayAIAdapter implements ProviderAdapter {
       return null;
     }
 
-    return toProviderAgent(matchedAgent);
+    return matchedAgent;
   }
 
   async checkAvailability(endpointUrl: string): Promise<AvailabilityResult> {

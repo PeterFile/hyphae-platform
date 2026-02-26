@@ -51,13 +51,10 @@ describe("DexterAdapter", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(results).toHaveLength(1);
     expect(first.provider).toBe("dexter");
-    if (first.provider !== "dexter") {
-      throw new Error("Expected dexter provider");
-    }
-    expect(first.agent.id).toBe(`dexter:${encodeURIComponent(resourceUrl)}`);
-    expect(first.agent.pricing.amountUsdcCents).toBe(5);
-    expect(first.agent.metadata?.source).toBe("api");
-    expect(first.agent.metadata?.rating).toBe(4.6);
+    expect(first.id).toBe(`dexter:${encodeURIComponent(resourceUrl)}`);
+    expect(first.pricing.amountUsdcCents).toBe(5);
+    expect(first.metadata?.source).toBe("api");
+    expect(first.metadata?.rating).toBe(4.6);
   });
 
   it("getById() expects unified dexter id and returns matched agent", async () => {
@@ -103,10 +100,7 @@ describe("DexterAdapter", () => {
     );
 
     expect(hit?.provider).toBe("dexter");
-    if (!hit || hit.provider !== "dexter") {
-      throw new Error("Expected dexter provider result");
-    }
-    expect(hit.agent.name).toBe("Secondary");
+    expect(hit?.name).toBe("Secondary");
     expect(miss).toBeNull();
   });
 
@@ -127,12 +121,9 @@ describe("DexterAdapter", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(results.length).toBeGreaterThan(0);
     expect(first.provider).toBe("dexter");
-    if (first.provider !== "dexter") {
-      throw new Error("Expected dexter provider");
-    }
-    expect(first.agent.metadata?.source).toBe("mock-fallback");
-    expect(first.agent.metadata?.comingSoon).toBe(true);
-    expect(first.agent.metadata?.note).toContain("Coming Soon");
+    expect(first.metadata?.source).toBe("mock-fallback");
+    expect(first.metadata?.comingSoon).toBe(true);
+    expect(first.metadata?.note).toContain("Coming Soon");
   });
 
   it("checkAvailability() delegates to availability checker and normalizes null status", async () => {

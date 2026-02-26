@@ -82,9 +82,7 @@ describe("CoinbaseAdapter", () => {
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "GET" });
     expect(results).toHaveLength(1);
 
-    const agent = (results[0] as unknown as { agent: { originalId: string } })
-      .agent;
-    expect(agent.originalId).toBe("https://api.example.com/stocks");
+    expect(results[0]?.originalId).toBe("https://api.example.com/stocks");
   });
 
   it("search() query matches metadata fields and accepts description", async () => {
@@ -139,8 +137,7 @@ describe("CoinbaseAdapter", () => {
     expect(found).not.toBeNull();
     expect(missing).toBeNull();
 
-    const agent = (found as unknown as { agent: { originalId: string } }).agent;
-    expect(agent.originalId).toBe("https://api.example.com/target");
+    expect(found?.originalId).toBe("https://api.example.com/target");
   });
 
   it("checkAvailability() delegates to availability checker", async () => {

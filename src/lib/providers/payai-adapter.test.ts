@@ -72,12 +72,11 @@ describe("PayAIAdapter", () => {
     const requestBody = JSON.parse(String(requestInit.body));
     expect(requestBody.method).toBe("getProgramAccounts");
     expect(requestBody.params[0]).toBe(process.env.PAYAI_PROGRAM_ID);
-    expect(results).toEqual([
-      {
-        provider: "payai",
-        agent: { id: "AgentPubkey1111111111111111111111111111111111" },
-      },
-    ]);
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      provider: "payai",
+      originalId: "AgentPubkey1111111111111111111111111111111111",
+    });
   });
 
   it("falls back to mock data when rpc request fails", async () => {
@@ -98,9 +97,10 @@ describe("PayAIAdapter", () => {
   it("returns item from fallback data in getById", async () => {
     const adapter = new PayAIAdapter();
 
-    expect(await adapter.getById("payai-mock-echo")).toEqual({
+    expect(await adapter.getById("payai-mock-echo")).toMatchObject({
       provider: "payai",
-      agent: { id: "payai-mock-echo" },
+      originalId: "payai-mock-echo",
+      id: "payai:payai-mock-echo",
     });
     expect(await adapter.getById("not-found")).toBeNull();
   });

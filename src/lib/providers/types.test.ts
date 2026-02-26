@@ -1,9 +1,9 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
+import type { UnifiedAgent } from "@/lib/unified-schema";
 
 import type {
   AvailabilityResult,
   ProviderAdapter,
-  ProviderAgent,
   ProviderName,
   SearchFilters,
 } from "./types";
@@ -16,7 +16,7 @@ describe("provider contracts", () => {
       category: "General",
       minPrice: 100,
       maxPrice: 500,
-      sort: "price_asc",
+      sort: "availability",
       page: 1,
       pageSize: 20,
     };
@@ -25,21 +25,6 @@ describe("provider contracts", () => {
       ProviderName | ProviderName[] | undefined
     >();
     expect(filters.page).toBe(1);
-  });
-
-  test("ProviderAgent is discriminated union", () => {
-    const coinbaseAgent: ProviderAgent = {
-      provider: "coinbase",
-      agent: { id: "cb-001" },
-    };
-
-    const payaiAgent: ProviderAgent = {
-      provider: "payai",
-      agent: { id: "pa-001" },
-    };
-
-    expect(coinbaseAgent.provider).toBe("coinbase");
-    expect(payaiAgent.provider).toBe("payai");
   });
 
   test("AvailabilityResult includes statusCode", () => {
@@ -54,10 +39,37 @@ describe("provider contracts", () => {
   });
 
   test("ProviderAdapter exposes required methods", async () => {
+    const unifiedAgent: UnifiedAgent = {
+      id: "coinbase:cb-001",
+      provider: "coinbase",
+      originalId: "cb-001",
+      name: "Coinbase Agent",
+      description: "Provider adapter contract test",
+      category: "General",
+      tags: [],
+      endpoint: {
+        url: "https://example.com/agent",
+        method: "GET",
+      },
+      pricing: {
+        amountUsdcCents: 100,
+        rawAmount: "1000000",
+        rawAsset: "USDC",
+        network: "base",
+      },
+      availability: {
+        isOnline: true,
+        lastChecked: "2026-02-25T02:29:24Z",
+        latencyMs: 40,
+        statusCode: 200,
+      },
+      metadata: undefined,
+    };
+
     const adapter: ProviderAdapter = {
       name: "coinbase",
-      search: async () => [],
-      getById: async () => null,
+      search: async () => [unifiedAgent],
+      getById: async () => unifiedAgent,
       checkAvailability: async () => ({
         isOnline: true,
         lastChecked: "2026-02-25T02:29:24Z",
@@ -67,6 +79,6 @@ describe("provider contracts", () => {
     };
 
     expectTypeOf(adapter.name).toEqualTypeOf<ProviderName>();
-    expect(await adapter.getById("x")).toBeNull();
+    expect((await adapter.getById("x"))?.id).toBe("coinbase:cb-001");
   });
 });
