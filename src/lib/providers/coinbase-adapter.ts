@@ -7,7 +7,6 @@ import { UnifiedAgentSchema, type UnifiedAgent } from "@/lib/unified-schema";
 import type {
   AvailabilityResult,
   ProviderAdapter,
-  ProviderAgent,
   SearchFilters,
 } from "./types";
 
@@ -305,13 +304,6 @@ function isIsoDateString(value: string): boolean {
   return !Number.isNaN(Date.parse(value));
 }
 
-function toProviderAgent(agent: UnifiedAgent): ProviderAgent {
-  return {
-    provider: "coinbase",
-    agent: agent as ProviderAgent["agent"],
-  };
-}
-
 function matchesQuery(resource: BazaarResource, query: string): boolean {
   if (query.length === 0) {
     return true;
@@ -393,18 +385,17 @@ export class CoinbaseAdapter implements ProviderAdapter {
   async search(
     query: string,
     filters?: SearchFilters
-  ): Promise<ProviderAgent[]> {
+  ): Promise<UnifiedAgent[]> {
     const resources = await this.fetchDiscoveryResources();
     const normalizedQuery = query.trim().toLowerCase();
 
     return resources
       .filter((resource) => matchesQuery(resource, normalizedQuery))
       .map((resource) => this.normalize(resource))
-      .filter((agent) => applyFilters(agent, filters))
-      .map((agent) => toProviderAgent(agent));
+      .filter((agent) => applyFilters(agent, filters));
   }
 
-  async getById(id: string): Promise<ProviderAgent | null> {
+  async getById(id: string): Promise<UnifiedAgent | null> {
     const normalizedId = id.trim();
 
     if (normalizedId.length === 0) {
@@ -424,7 +415,7 @@ export class CoinbaseAdapter implements ProviderAdapter {
       return null;
     }
 
-    return toProviderAgent(this.normalize(found));
+    return this.normalize(found);
   }
 
   async checkAvailability(endpointUrl: string): Promise<AvailabilityResult> {

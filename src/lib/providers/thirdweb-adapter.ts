@@ -5,7 +5,6 @@ import { UnifiedAgentSchema, type UnifiedAgent } from "@/lib/unified-schema";
 import type {
   AvailabilityResult,
   ProviderAdapter,
-  ProviderAgent,
   SearchFilters,
 } from "./types";
 
@@ -166,7 +165,7 @@ function normalizeSort(sort: SearchFilters["sort"]): {
     return { sortBy: "price", sortOrder: "desc" };
   }
 
-  if (sort === "rating") {
+  if (sort === "availability") {
     return { sortBy: "uniqueBuyers", sortOrder: "desc" };
   }
 
@@ -277,7 +276,7 @@ export class ThirdwebAdapter implements ProviderAdapter {
   private readonly fetchFn: typeof fetch;
   private readonly secretKey?: string;
   private readonly endpointUrl: string;
-  private readonly providerAgentCache = new Map<string, ProviderAgent>();
+  private readonly providerAgentCache = new Map<string, UnifiedAgent>();
   private readonly errorLog: ThirdwebAdapterError[] = [];
 
   constructor(options: ThirdwebAdapterOptions = {}) {
@@ -293,7 +292,7 @@ export class ThirdwebAdapter implements ProviderAdapter {
   async search(
     query: string,
     filters: SearchFilters = {}
-  ): Promise<ProviderAgent[]> {
+  ): Promise<UnifiedAgent[]> {
     this.lastError = null;
     const secretKey = this.secretKey ?? process.env.THIRDWEB_SECRET_KEY;
 
@@ -334,18 +333,11 @@ export class ThirdwebAdapter implements ProviderAdapter {
 
     const normalizedAgents = this.parseAndNormalizePayload(payload);
     const filteredAgents = this.applyFilters(normalizedAgents, filters);
-    const providerAgents: ProviderAgent[] = filteredAgents.map((agent) => ({
-      provider: "thirdweb",
-      agent: {
-        id: agent.id,
-      },
-    }));
-
-    this.cacheResults(filteredAgents, providerAgents);
-    return providerAgents;
+    this.cacheResults(filteredAgents);
+    return filteredAgents;
   }
 
-  async getById(id: string): Promise<ProviderAgent | null> {
+  async getById(id: string): Promise<UnifiedAgent | null> {
     const direct = this.providerAgentCache.get(id);
     if (direct) {
       return direct;
@@ -501,29 +493,16 @@ export class ThirdwebAdapter implements ProviderAdapter {
         (left, right) =>
           right.pricing.amountUsdcCents - left.pricing.amountUsdcCents
       );
-    } else if (filters.sort === "name") {
-      filtered.sort((left, right) => left.name.localeCompare(right.name));
-    } else if (filters.sort === "rating") {
-      filtered.sort(
-        (left, right) =>
-          (right.metadata?.rating ?? 0) - (left.metadata?.rating ?? 0)
-      );
     }
 
     return filtered;
   }
 
-  private cacheResults(
-    unifiedAgents: UnifiedAgent[],
-    providerAgents: ProviderAgent[]
-  ): void {
-    for (let index = 0; index < providerAgents.length; index += 1) {
-      const unifiedAgent = unifiedAgents[index];
-      const providerAgent = providerAgents[index];
-
-      this.providerAgentCache.set(unifiedAgent.id, providerAgent);
-      this.providerAgentCache.set(unifiedAgent.originalId, providerAgent);
-      this.providerAgentCache.set(unifiedAgent.endpoint.url, providerAgent);
+  private cacheResults(unifiedAgents: UnifiedAgent[]): void {
+    for (const unifiedAgent of unifiedAgents) {
+      this.providerAgentCache.set(unifiedAgent.id, unifiedAgent);
+      this.providerAgentCache.set(unifiedAgent.originalId, unifiedAgent);
+      this.providerAgentCache.set(unifiedAgent.endpoint.url, unifiedAgent);
     }
   }
 

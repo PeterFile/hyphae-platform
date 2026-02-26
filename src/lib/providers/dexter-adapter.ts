@@ -7,7 +7,6 @@ import { UnifiedAgentSchema, type UnifiedAgent } from "@/lib/unified-schema";
 import type {
   AvailabilityResult,
   ProviderAdapter,
-  ProviderAgent,
   SearchFilters,
 } from "./types";
 
@@ -200,7 +199,7 @@ export class DexterAdapter implements ProviderAdapter {
   public async search(
     query: string,
     filters?: SearchFilters
-  ): Promise<ProviderAgent[]> {
+  ): Promise<UnifiedAgent[]> {
     if (!matchesProviderFilter(filters?.provider)) {
       return [];
     }
@@ -216,13 +215,10 @@ export class DexterAdapter implements ProviderAdapter {
       filters
     );
 
-    return filteredAgents.map((agent) => ({
-      provider: "dexter",
-      agent,
-    }));
+    return filteredAgents;
   }
 
-  public async getById(id: string): Promise<ProviderAgent | null> {
+  public async getById(id: string): Promise<UnifiedAgent | null> {
     const originalId = parseDexterUnifiedId(id);
 
     if (!originalId) {
@@ -238,10 +234,7 @@ export class DexterAdapter implements ProviderAdapter {
       return null;
     }
 
-    return {
-      provider: "dexter",
-      agent: this.normalize(matchedResource, { source, note }),
-    };
+    return this.normalize(matchedResource, { source, note });
   }
 
   public async checkAvailability(
@@ -373,16 +366,6 @@ export class DexterAdapter implements ProviderAdapter {
     if (filters?.sort === "price_desc") {
       sorted.sort(
         (a, b) => b.pricing.amountUsdcCents - a.pricing.amountUsdcCents
-      );
-    }
-
-    if (filters?.sort === "name") {
-      sorted.sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    if (filters?.sort === "rating") {
-      sorted.sort(
-        (a, b) => (b.metadata?.rating ?? 0) - (a.metadata?.rating ?? 0)
       );
     }
 

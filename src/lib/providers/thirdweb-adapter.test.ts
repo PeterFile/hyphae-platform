@@ -87,14 +87,10 @@ describe("ThirdwebAdapter", () => {
     expect(headers.get("x-client-id")).toBe("sk_test_123");
 
     expect(result).toHaveLength(1);
-    expect(result[0]).toEqual({
-      provider: "thirdweb",
-      agent: {
-        id: expect.stringMatching(/^thirdweb:/),
-      },
-    });
+    expect(result[0]?.provider).toBe("thirdweb");
+    expect(result[0]?.id).toMatch(/^thirdweb:/);
 
-    const fullId = result[0].agent.id;
+    const fullId = result[0]!.id;
     const originalId = fullId.replace("thirdweb:", "");
     expect(await adapter.getById(fullId)).toEqual(result[0]);
     expect(await adapter.getById(originalId)).toEqual(result[0]);
