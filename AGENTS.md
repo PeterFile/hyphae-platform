@@ -3,6 +3,7 @@
 ## Project Structure & Module Organization
 
 - `src/app/`: Next.js App Router routes (UI) and API routes under `src/app/api/**/route.ts`.
+- Route handlers in `src/app/api/**/route.ts` must only export valid Next.js route fields (HTTP methods and route config); keep test hooks/helpers in sibling modules like `handler.ts`.
 - `src/components/`: reusable UI components (keep generic, no route-specific logic).
 - `src/hooks/`: shared React hooks.
 - `src/lib/`: shared utilities (API clients, validators, helpers).
