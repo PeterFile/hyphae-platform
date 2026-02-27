@@ -11,8 +11,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ProviderBadge } from "./provider-badge";
 import { AvailabilityDot } from "./availability-dot";
+import { useCompareStore } from "@/stores/compare-store";
 
 interface AgentCardProps {
   agent: UnifiedAgent;
@@ -22,6 +24,18 @@ export function AgentCard({ agent }: AgentCardProps) {
   const priceInUsdc = (agent.pricing.amountUsdcCents / 100).toFixed(2);
   const isOnline = agent.availability.isOnline;
   const latencyMs = agent.availability.latencyMs;
+
+  const compareStore = useCompareStore();
+  const isSelected = compareStore.selectedIds.includes(
+    `${agent.provider}:${agent.originalId}`
+  );
+  const reachedMax = compareStore.selectedIds.length >= 4;
+
+  const handleCompareClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    compareStore.toggleAgent(agent.provider, agent.originalId);
+  };
 
   return (
     <Link
@@ -44,6 +58,14 @@ export function AgentCard({ agent }: AgentCardProps) {
                   <AvailabilityDot isOnline={isOnline} latencyMs={latencyMs} />
                 </div>
                 <ProviderBadge provider={agent.provider} />
+              </div>
+
+              <div className="flex items-start" onClick={handleCompareClick}>
+                <Checkbox
+                  checked={isSelected}
+                  disabled={!isSelected && reachedMax}
+                  className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                />
               </div>
             </div>
           </CardHeader>
