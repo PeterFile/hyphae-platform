@@ -6,13 +6,17 @@ export type AvailabilityResponse = {
   lastChecked: string;
 };
 
-export function useAvailability(agentId: string) {
+function buildAvailabilityUrl(id: string, endpointUrl?: string): string {
+  const params = new URLSearchParams({ id });
+  if (endpointUrl) params.set("endpointUrl", endpointUrl);
+  return `/api/store/availability?${params.toString()}`;
+}
+
+export function useAvailability(agentId: string, endpointUrl?: string) {
   const query = useQuery({
     queryKey: ["store", "availability", agentId],
     queryFn: async () => {
-      const res = await fetch(
-        `/api/store/availability?id=${encodeURIComponent(agentId)}`
-      );
+      const res = await fetch(buildAvailabilityUrl(agentId, endpointUrl));
       if (!res.ok) {
         throw new Error("Failed to fetch availability");
       }
@@ -32,14 +36,19 @@ export function useAvailability(agentId: string) {
   };
 }
 
-export function useAvailabilityBatch(agentIds: string[]) {
+type AgentRef = { id: string; endpointUrl?: string };
+
+export function useAvailabilityBatch(agents: AgentRef[] | string[]) {
+  // Normalise string[] → AgentRef[] for backward compatibility
+  const normalised: AgentRef[] = agents.map((a) =>
+    typeof a === "string" ? { id: a } : a
+  );
+
   const queries = useQueries({
-    queries: agentIds.map((id) => ({
+    queries: normalised.map(({ id, endpointUrl }) => ({
       queryKey: ["store", "availability", id],
       queryFn: async () => {
-        const res = await fetch(
-          `/api/store/availability?id=${encodeURIComponent(id)}`
-        );
+        const res = await fetch(buildAvailabilityUrl(id, endpointUrl));
         if (!res.ok) {
           throw new Error("Failed to fetch availability");
         }
@@ -53,7 +62,7 @@ export function useAvailabilityBatch(agentIds: string[]) {
 
   return queries.reduce(
     (acc, query, index) => {
-      const id = agentIds[index];
+      const id = normalised[index]!.id;
       acc[id] = {
         isOnline: query.data?.isOnline ?? false,
         latencyMs: query.data?.latencyMs ?? 0,

@@ -96,6 +96,57 @@ describe("ThirdwebAdapter", () => {
     expect(await adapter.getById(originalId)).toEqual(result[0]);
   });
 
+  it("getById() hydrates cache from discovery when cache is empty", async () => {
+    const targetResource = {
+      x402Version: 1,
+      items: [
+        {
+          resource: "https://yddkctoq.nx.link/v1/wallets/%7Baddress%7D/tokens",
+          type: "http" as const,
+          x402Version: 1,
+          accepts: [
+            {
+              scheme: "exact" as const,
+              network: "eip155:8453",
+              maxAmountRequired: "10000",
+              resource:
+                "https://yddkctoq.nx.link/v1/wallets/%7Baddress%7D/tokens",
+              description: "Wallet token balances",
+              mimeType: "application/json",
+              payTo: PAY_TO,
+              maxTimeoutSeconds: 60,
+              asset: BASE_USDC,
+            },
+          ],
+          lastUpdated: "2026-02-25T12:00:00Z",
+        },
+      ],
+      pagination: {
+        limit: 20,
+        offset: 0,
+        total: 1,
+      },
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(targetResource)));
+    const adapter = new ThirdwebAdapter({
+      secretKey: "sk_test_123",
+      fetchFn: fetchMock,
+    });
+
+    const found = await adapter.getById(
+      "yddkctoq-nx-link-v1-wallets-7baddress-7d-tokens"
+    );
+
+    expect(found).not.toBeNull();
+    expect(found?.provider).toBe("thirdweb");
+    expect(found?.originalId).toBe(
+      "yddkctoq-nx-link-v1-wallets-7baddress-7d-tokens"
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("normalizes with defaults instead of dropping incomplete resources", () => {
     const adapter = new ThirdwebAdapter({ secretKey: "sk_test_123" });
 
