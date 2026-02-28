@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { UnifiedAgentSchema } from "@/lib/unified-schema";
 
@@ -6,6 +6,8 @@ import {
   CoinbaseAdapter,
   DEFAULT_COINBASE_FACILITATOR_URL,
   resolveCoinbaseFacilitatorUrl,
+  clearDiscoveryCache,
+  setDiscoveryCacheTtl,
   type BazaarResource,
 } from "./coinbase-adapter";
 
@@ -46,6 +48,13 @@ function createResource(
 }
 
 describe("CoinbaseAdapter", () => {
+  beforeEach(() => {
+    // Ensure each test starts with a cold cache.
+    clearDiscoveryCache();
+    setDiscoveryCacheTtl(60_000);
+    vi.useRealTimers();
+  });
+
   it("search() calls GET {facilitatorUrl}/discovery/resources and filters by resource URL", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
@@ -214,5 +223,86 @@ describe("CoinbaseAdapter", () => {
 
     expect(url).toBe(DEFAULT_COINBASE_FACILITATOR_URL);
     expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("fetchDiscoveryResources() returns cached result on second call (no extra fetch)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ items: [createResource()] }), {
+        status: 200,
+      })
+    );
+
+    const adapter = new CoinbaseAdapter({
+      facilitatorUrl: "https://api.cdp.coinbase.com/platform/v2/x402",
+      fetchImpl: fetchMock,
+    });
+
+    // Two calls to different methods — should only hit network once.
+    await adapter.search("weather");
+    await adapter.search("weather");
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("fetchDiscoveryResources() refetches after TTL expires", async () => {
+    vi.useFakeTimers();
+    setDiscoveryCacheTtl(1000);
+
+    // Factory ensures each fetch call gets a fresh Response (body can only be read once).
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ items: [createResource()] }), {
+          status: 200,
+        })
+      )
+    );
+
+    const adapter = new CoinbaseAdapter({
+      facilitatorUrl: "https://api.cdp.coinbase.com/platform/v2/x402",
+      fetchImpl: fetchMock,
+    });
+
+    // Drive the first request to completion with fake timers active.
+    const p1 = adapter.search("weather");
+    await vi.runAllTimersAsync();
+    await p1;
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Advance past TTL so cache is stale.
+    vi.advanceTimersByTime(1001);
+
+    // Drive the second request — should re-fetch.
+    const p2 = adapter.search("weather");
+    await vi.runAllTimersAsync();
+    await p2;
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("fetchDiscoveryResources() retries on 429 and succeeds on second attempt", async () => {
+    vi.useFakeTimers();
+
+    const fetchMock = vi
+      .fn()
+      // First call: rate limited.
+      .mockResolvedValueOnce(new Response(null, { status: 429 }))
+      // Second call (after backoff): success.
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ items: [createResource()] }), {
+          status: 200,
+        })
+      );
+
+    const adapter = new CoinbaseAdapter({
+      facilitatorUrl: "https://api.cdp.coinbase.com/platform/v2/x402",
+      fetchImpl: fetchMock,
+    });
+
+    const promise = adapter.search("weather");
+    // Tick past the 500ms backoff sleep.
+    await vi.runAllTimersAsync();
+    const results = await promise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(results).toHaveLength(1);
   });
 });

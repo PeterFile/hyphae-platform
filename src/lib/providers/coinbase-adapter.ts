@@ -14,6 +14,28 @@ export const DEFAULT_COINBASE_FACILITATOR_URL =
   "https://api.cdp.coinbase.com/platform/v2/x402";
 
 const TRANSIENT_STATUSES = new Set([429, 500, 502, 503, 504]);
+
+// Module-level discovery cache shared across all adapter instances.
+let _discoveryCacheTtlMs = 60_000;
+const _discoveryCache: { data: BazaarResource[] | null; expiresAt: number } = {
+  data: null,
+  expiresAt: 0,
+};
+
+/** Exposed for tests: flush the in-process discovery cache. */
+export function clearDiscoveryCache(): void {
+  _discoveryCache.data = null;
+  _discoveryCache.expiresAt = 0;
+}
+
+/** Exposed for tests: override cache TTL (ms). */
+export function setDiscoveryCacheTtl(ms: number): void {
+  _discoveryCacheTtlMs = ms;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 const KNOWN_USDC_ASSETS = new Set([
   "usdc",
   "usdc.e",
@@ -498,10 +520,22 @@ export class CoinbaseAdapter implements ProviderAdapter {
   }
 
   private async fetchDiscoveryResources(): Promise<BazaarResource[]> {
+    const now = Date.now();
+
+    // Cache hit: return without touching the network.
+    if (_discoveryCache.data !== null && now < _discoveryCache.expiresAt) {
+      return _discoveryCache.data;
+    }
+
     const discoveryUrl = `${this.facilitatorUrl}/discovery/resources`;
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
+      if (attempt > 0) {
+        // Brief backoff so we don't immediately re-trigger a rate limit.
+        await sleep(500);
+      }
+
       try {
         const response = await this.fetchImpl(discoveryUrl, {
           method: "GET",
@@ -522,7 +556,13 @@ export class CoinbaseAdapter implements ProviderAdapter {
         }
 
         const payload = await response.json();
-        return parseDiscoveryPayload(payload);
+        const resources = parseDiscoveryPayload(payload);
+
+        // Populate cache on success.
+        _discoveryCache.data = resources;
+        _discoveryCache.expiresAt = Date.now() + _discoveryCacheTtlMs;
+
+        return resources;
       } catch (error) {
         lastError = toError(error);
 
