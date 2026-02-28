@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 菌丝体平台 (Hyphae Platform)
 
-## Getting Started
+## 项目概述
 
-First, run the development server:
+本项目是一个聚合、搜索和评测各类 AI Agent 的智能体应用平台。它为用户提供了一个统一的搜索和过滤机制，帮助用户快速发现适合场景的智能体。同时支持多智能体的横向对比与调用 (Invoke)。
+
+## 主要功能
+
+- **智能体商店 (Store)**：多维度过滤（价格、可用性等）和浏览智能体。
+- **工作台交互 (Playground)**：提供沉浸式的智能体对话与测试环境。
+- **直接调用 (Invoke)**：一键调用智能体执行特定任务并获知运行结果。
+- **多维度对比 (Compare)**：一键加入对比清单，横向评估不同智能体。
+- **Web3 与支付集成**：通过 Coinbase Adapter 提供钱包连接与 Burner Wallet 支付功能。
+
+## 安装与运行步骤
+
+1. **克隆仓库**
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/PeterFile/hyphae-platform.git
+cd hyphae-platform
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **安装依赖**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. **配置环境变量**
+   创建 `.env.local` 文件，并填入第三方服务凭证（例如：`COINBASE_API_KEY`）。
 
-## Learn More
+4. **启动开发服务器**
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+访问 [http://localhost:3000](http://localhost:3000) 查看结果。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 技术栈
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 框架：Next.js 14 (App Router)
+- 语言：TypeScript
+- 样式：Tailwind CSS
+- 状态管理：Zustand
+- 钱包集成：Thirdweb SDK, Coinbase Adapter

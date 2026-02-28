@@ -11,6 +11,7 @@ import { DexterAdapter } from "@/lib/providers/dexter-adapter";
 import { PayAIAdapter } from "@/lib/providers/payai-adapter";
 import { ProviderBadge } from "@/components/store/provider-badge";
 import { RealtimeAvailability } from "./realtime-availability";
+import { AgentPlayground } from "@/components/store/agent-playground";
 import {
   Card,
   CardContent,
@@ -143,6 +144,9 @@ export default async function AgentDetailPage(props: {
               </div>
             </CardContent>
           </Card>
+
+          {/* Playground Card */}
+          <AgentPlayground agent={agent} />
         </div>
 
         {/* Sidebar */}
