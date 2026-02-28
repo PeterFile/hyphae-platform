@@ -6,6 +6,7 @@ export interface FilterState {
   query: string;
   providers: ProviderName[];
   categories: string[];
+  availableCategories: string[];
   priceRange: { min: number; max: number } | null;
   status: "all" | "online" | "offline";
   sort: "relevance" | "price-asc" | "price-desc" | "availability";
@@ -16,6 +17,7 @@ export interface FilterActions {
   setQuery: (query: string) => void;
   toggleProvider: (provider: ProviderName) => void;
   setCategories: (categories: string[]) => void;
+  setAvailableCategories: (categories: string[]) => void;
   setPriceRange: (range: { min: number; max: number } | null) => void;
   setStatus: (status: FilterState["status"]) => void;
   setSort: (sort: FilterState["sort"]) => void;
@@ -37,6 +39,7 @@ const initialState: FilterState = {
   query: "",
   providers: defaultProviders,
   categories: [],
+  availableCategories: [],
   priceRange: null,
   status: "all",
   sort: "relevance",
@@ -57,6 +60,8 @@ export const useFilterStore = create<FilterStore>()(
           return { providers: newProviders, page: 1 };
         }),
       setCategories: (categories) => set({ categories, page: 1 }),
+      setAvailableCategories: (availableCategories) =>
+        set({ availableCategories }),
       setPriceRange: (priceRange) => set({ priceRange, page: 1 }),
       setStatus: (status) => set({ status, page: 1 }),
       setSort: (sort) => set({ sort, page: 1 }),

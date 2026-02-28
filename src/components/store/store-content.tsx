@@ -10,6 +10,7 @@ import {
   useInfiniteUnifiedSearch,
   type SearchResponse,
 } from "@/hooks/use-unified-search";
+import { useAvailabilityBatch } from "@/hooks/use-availability";
 import { AgentCard } from "@/components/store/agent-card";
 import { Button } from "@/components/ui/button";
 import type { FilterState } from "@/stores/filter-store";
@@ -56,6 +57,7 @@ export function StoreContent({ initialData }: StoreContentProps) {
     setQuery,
     setCategories,
     setSort,
+    setAvailableCategories,
   } = useFilterStore();
 
   const isInitialMount = React.useRef(true);
@@ -138,6 +140,32 @@ export function StoreContent({ initialData }: StoreContentProps) {
     return baseAgents;
   }, [rawAgents, initialData, status]);
 
+  // Extract unique categories from results and sync to store
+  const extractedCategories = React.useMemo(() => {
+    const base =
+      rawAgents.length > 0 ? rawAgents : (initialData?.results ?? []);
+    const cats = [...new Set(base.map((a) => a.category).filter(Boolean))];
+    return cats.sort();
+  }, [rawAgents, initialData]);
+
+  // Guard with a ref to avoid triggering store updates on every render
+  const prevCategoriesRef = React.useRef<string>("");
+  React.useEffect(() => {
+    if (extractedCategories.length === 0) return;
+    const next = extractedCategories.join(",");
+    if (next !== prevCategoriesRef.current) {
+      prevCategoriesRef.current = next;
+      setAvailableCategories(extractedCategories);
+    }
+  }, [extractedCategories, setAvailableCategories]);
+
+  // Poll live availability for visible agents
+  const agentIds = React.useMemo(
+    () => filteredAgents.map((a) => a.id),
+    [filteredAgents]
+  );
+  const availabilityMap = useAvailabilityBatch(agentIds);
+
   const displayCount =
     rawAgents.length > 0 ? totalCount : (initialData?.totalCount ?? 0);
 
@@ -214,7 +242,17 @@ export function StoreContent({ initialData }: StoreContentProps) {
                     }}
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                   >
-                    <AgentCard agent={agent} />
+                    <AgentCard
+                      agent={agent}
+                      availabilityOverride={
+                        availabilityMap[agent.id]
+                          ? {
+                              isOnline: availabilityMap[agent.id].isOnline,
+                              latencyMs: availabilityMap[agent.id].latencyMs,
+                            }
+                          : undefined
+                      }
+                    />
                   </motion.div>
                 ))}
           </AnimatePresence>

@@ -26,11 +26,19 @@ async function getInitialSearchData(searchParams: {
     const host = headersList.get("host") || "localhost:3000";
     const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
 
+    const sortMap: Record<string, string> = {
+      "price-asc": "price_asc",
+      "price-desc": "price_desc",
+    };
+
     const params = new URLSearchParams();
     if (searchParams.q) params.set("q", searchParams.q as string);
     if (searchParams.category)
       params.set("category", searchParams.category as string);
-    if (searchParams.sort) params.set("sort", searchParams.sort as string);
+    if (searchParams.sort) {
+      const raw = searchParams.sort as string;
+      params.set("sort", sortMap[raw] ?? raw);
+    }
 
     // Filter store defines default providers: coinbase, thirdweb, dexter, payai
     // Only fetch default if non provided
