@@ -44,7 +44,10 @@ const KNOWN_USDC_ASSETS = new Set([
 ]);
 
 type AdapterEnv = Partial<
-  Record<"COINBASE_FACILITATOR_URL" | "NODE_ENV", string | undefined>
+  Record<
+    "COINBASE_FACILITATOR_URL" | "COINBASE_API_KEY" | "NODE_ENV",
+    string | undefined
+  >
 >;
 
 const BazaarAcceptSchema = z
@@ -95,6 +98,7 @@ export type BazaarResource = {
 
 type CoinbaseAdapterOptions = {
   facilitatorUrl?: string;
+  apiKey?: string;
   fetchImpl?: typeof fetch;
   availabilityChecker?: (endpointUrl: string) => Promise<AvailabilityResult>;
   now?: () => Date;
@@ -384,6 +388,7 @@ export class CoinbaseAdapter implements ProviderAdapter {
   readonly name = "coinbase" as const;
 
   private readonly facilitatorUrl: string;
+  private readonly apiKey: string | undefined;
   private readonly fetchImpl: typeof fetch;
   private readonly availabilityChecker: (
     endpointUrl: string
@@ -394,6 +399,8 @@ export class CoinbaseAdapter implements ProviderAdapter {
     this.facilitatorUrl = stripTrailingSlash(
       options.facilitatorUrl ?? resolveCoinbaseFacilitatorUrl()
     );
+    this.apiKey =
+      (options.apiKey ?? process.env.COINBASE_API_KEY?.trim()) || undefined;
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.availabilityChecker =
       options.availabilityChecker ??
@@ -537,11 +544,17 @@ export class CoinbaseAdapter implements ProviderAdapter {
       }
 
       try {
+        const headers: Record<string, string> = {
+          Accept: "application/json",
+        };
+
+        if (this.apiKey) {
+          headers["Authorization"] = `Bearer ${this.apiKey}`;
+        }
+
         const response = await this.fetchImpl(discoveryUrl, {
           method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
+          headers,
         });
 
         if (!response.ok) {
