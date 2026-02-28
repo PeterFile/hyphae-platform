@@ -5,7 +5,8 @@ import type { UnifiedAgent } from "@/lib/unified-schema";
 
 import { createInvokeRouteHandler } from "./handler";
 
-type InvokeAdapter = Pick<ProviderAdapter, "getById">;
+type InvokeAdapter = Pick<ProviderAdapter, "getById"> &
+  Partial<Pick<ProviderAdapter, "search">>;
 
 function createAgent(
   id: string,
