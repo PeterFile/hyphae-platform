@@ -2,6 +2,7 @@ import * as React from "react";
 import { Suspense } from "react";
 import { type Metadata } from "next";
 import { headers } from "next/headers";
+import Link from "next/link";
 import { FilterPanel } from "@/components/store/filter-panel";
 import { SearchBar } from "@/components/store/search-bar";
 import { StoreContent } from "@/components/store/store-content";
@@ -97,6 +98,14 @@ export default async function StorePage({
             Search across thousands of verified AI agents from different
             providers to find exactly what you need.
           </p>
+          <div>
+            <Link
+              href="/developers/gateway"
+              className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm font-medium text-foreground/90 hover:bg-muted"
+            >
+              Gateway Developer Guide
+            </Link>
+          </div>
           <div className="w-full max-w-3xl flex justify-center sticky top-20 z-10 p-2">
             <SearchBar className="bg-background/40 shadow shadow-primary/5 border border-border/80" />
           </div>
