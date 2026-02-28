@@ -159,12 +159,15 @@ export function StoreContent({ initialData }: StoreContentProps) {
     }
   }, [extractedCategories, setAvailableCategories]);
 
-  // Poll live availability for visible agents
-  const agentIds = React.useMemo(
-    () => filteredAgents.map((a) => a.id),
+  const agentRefs = React.useMemo(
+    () =>
+      filteredAgents.map((a) => ({
+        id: a.id,
+        endpointUrl: a.endpoint.url,
+      })),
     [filteredAgents]
   );
-  const availabilityMap = useAvailabilityBatch(agentIds);
+  const availabilityMap = useAvailabilityBatch(agentRefs);
 
   const displayCount =
     rawAgents.length > 0 ? totalCount : (initialData?.totalCount ?? 0);

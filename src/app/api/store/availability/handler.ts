@@ -16,6 +16,7 @@ const CACHE_TTL_MS = 30_000;
 
 const AvailabilityQuerySchema = z.object({
   id: z.string().trim().min(1),
+  endpointUrl: z.string().url().optional(),
 });
 
 type AvailabilityPayload = {
@@ -226,14 +227,57 @@ export function createAvailabilityRouteHandler(
   const now = dependencies.now ?? (() => Date.now());
 
   return async function GET(request: Request): Promise<Response> {
+    const searchParams = new URL(request.url).searchParams;
     const parsedQuery = AvailabilityQuerySchema.safeParse({
-      id: new URL(request.url).searchParams.get("id"),
+      id: searchParams.get("id"),
+      endpointUrl: searchParams.get("endpointUrl") ?? undefined,
     });
     if (!parsedQuery.success) {
       return errorResponse(422, "Invalid query parameter: id");
     }
 
-    const parsedId = parseProviderFromId(parsedQuery.data.id);
+    const { id, endpointUrl: directUrl } = parsedQuery.data;
+
+    // Fast path: client already knows the endpoint URL — skip cache lookup.
+    if (directUrl) {
+      const validationError = validateEndpointUrl(directUrl);
+      if (validationError) {
+        return errorResponse(422, validationError);
+      }
+
+      const nowMs = now();
+      const cachedResult = readCache(cache, directUrl, nowMs);
+      if (cachedResult) {
+        return Response.json(cachedResult);
+      }
+
+      // Determine provider from id prefix to select the right adapter.
+      const parsedIdFast = parseProviderFromId(id);
+      const adapterFast = parsedIdFast ? adapters[parsedIdFast.provider] : null;
+      if (!adapterFast) {
+        return errorResponse(
+          500,
+          `Provider adapter not configured for id: ${id}`
+        );
+      }
+
+      let fastResult: AvailabilityResult;
+      try {
+        fastResult = await adapterFast.checkAvailability(directUrl);
+      } catch {
+        return errorResponse(500, "Failed to check endpoint availability");
+      }
+
+      const fastPayload = toPayload(fastResult);
+      cache.set(directUrl, {
+        value: fastPayload,
+        expiresAt: nowMs + CACHE_TTL_MS,
+      });
+
+      return Response.json(fastPayload);
+    }
+
+    const parsedId = parseProviderFromId(id);
     if (!parsedId) {
       return errorResponse(
         422,

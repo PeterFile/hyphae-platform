@@ -338,13 +338,31 @@ export class ThirdwebAdapter implements ProviderAdapter {
   }
 
   async getById(id: string): Promise<UnifiedAgent | null> {
-    const direct = this.providerAgentCache.get(id);
+    const lookupId = id.trim();
+    if (lookupId.length === 0) {
+      return null;
+    }
+
+    const direct = this.providerAgentCache.get(lookupId);
     if (direct) {
       return direct;
     }
 
-    const prefixed = id.startsWith("thirdweb:") ? id : `thirdweb:${id}`;
-    return this.providerAgentCache.get(prefixed) ?? null;
+    const prefixed = lookupId.startsWith("thirdweb:")
+      ? lookupId
+      : `thirdweb:${lookupId}`;
+    const cached = this.providerAgentCache.get(prefixed);
+    if (cached) {
+      return cached;
+    }
+
+    await this.search("", {});
+
+    return (
+      this.providerAgentCache.get(lookupId) ??
+      this.providerAgentCache.get(prefixed) ??
+      null
+    );
   }
 
   async checkAvailability(endpointUrl: string): Promise<AvailabilityResult> {
