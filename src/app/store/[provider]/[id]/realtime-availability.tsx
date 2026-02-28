@@ -10,7 +10,10 @@ interface RealtimeAvailabilityProps {
 }
 
 export function RealtimeAvailability({ agent }: RealtimeAvailabilityProps) {
-  const { isOnline, latencyMs, lastChecked } = useAvailability(agent.id);
+  const { isOnline, latencyMs, lastChecked } = useAvailability(
+    agent.id,
+    agent.endpoint.url
+  );
   const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
