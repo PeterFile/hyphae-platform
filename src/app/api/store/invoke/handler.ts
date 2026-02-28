@@ -5,6 +5,7 @@ import { CoinbaseAdapter } from "@/lib/providers/coinbase-adapter";
 import { DexterAdapter } from "@/lib/providers/dexter-adapter";
 import { PayAIAdapter } from "@/lib/providers/payai-adapter";
 import { ThirdwebAdapter } from "@/lib/providers/thirdweb-adapter";
+import { getProviderInvokeBlockMessage } from "@/lib/providers/invoke-policy";
 import type { ProviderAdapter, ProviderName } from "@/lib/providers/types";
 import { ProviderNameSchema } from "@/lib/providers/types";
 
@@ -410,6 +411,18 @@ export function createInvokeRouteHandler(
       return errorResponse(
         422,
         "Invalid id format, expected provider:originalId"
+      );
+    }
+
+    const blockedMessage = getProviderInvokeBlockMessage(parsedId.provider);
+    if (blockedMessage !== null) {
+      return Response.json(
+        {
+          error: "provider_not_invokable_yet",
+          provider: parsedId.provider,
+          message: blockedMessage,
+        },
+        { status: 422 }
       );
     }
 

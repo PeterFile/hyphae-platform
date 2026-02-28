@@ -98,6 +98,35 @@ describe("POST /api/store/invoke", () => {
     expect(response.status).toBe(422);
   });
 
+  it("returns 422 provider_not_invokable_yet for blocked provider", async () => {
+    const getById = vi.fn();
+    const search = vi.fn();
+    const fetchFn = vi.fn();
+    const handler = createInvokeRouteHandler({
+      adapters: {
+        thirdweb: { getById, search } satisfies InvokeAdapter,
+      },
+      fetchFn,
+    });
+
+    const response = await handler(
+      buildRequest({
+        id: "thirdweb:agent-1",
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(payload).toMatchObject({
+      error: "provider_not_invokable_yet",
+      provider: "thirdweb",
+    });
+    expect(typeof payload.message).toBe("string");
+    expect(getById).not.toHaveBeenCalled();
+    expect(search).not.toHaveBeenCalled();
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
   it("returns 404 when agent is not found", async () => {
     const getById = vi.fn().mockResolvedValue(null);
     const fetchFn = vi.fn();
@@ -262,7 +291,7 @@ describe("POST /api/store/invoke", () => {
   });
 
   it("proxies POST invoke with payment header and text response", async () => {
-    const agent = createAgent("thirdweb:agent-3", {
+    const agent = createAgent("coinbase:agent-3", {
       url: "https://upstream.example.com/run",
       method: "POST",
     });
@@ -279,14 +308,14 @@ describe("POST /api/store/invoke", () => {
     );
     const handler = createInvokeRouteHandler({
       adapters: {
-        thirdweb: { getById } satisfies InvokeAdapter,
+        coinbase: { getById } satisfies InvokeAdapter,
       },
       fetchFn,
     });
 
     const response = await handler(
       buildRequest({
-        id: "thirdweb:agent-3",
+        id: "coinbase:agent-3",
         input: {
           prompt: "hi",
         },
@@ -314,43 +343,5 @@ describe("POST /api/store/invoke", () => {
     expect(headers.get("Accept")).toBe("application/json");
     expect(headers.get("Content-Type")).toBe("application/json");
     expect(headers.get("X-PAYMENT")).toBe("signed-value");
-  });
-
-  it("warms thirdweb cache by search on first getById miss", async () => {
-    const agent = createAgent("thirdweb:agent-warm", {
-      url: "https://upstream.example.com/run",
-      method: "POST",
-    });
-    const getById = vi
-      .fn()
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(agent);
-    const search = vi.fn().mockResolvedValue([agent]);
-    const fetchFn = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      })
-    );
-    const handler = createInvokeRouteHandler({
-      adapters: {
-        thirdweb: { getById, search } satisfies InvokeAdapter,
-      },
-      fetchFn,
-    });
-
-    const response = await handler(
-      buildRequest({
-        id: "thirdweb:agent-warm",
-        input: { ping: "pong" },
-      })
-    );
-    const payload = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(payload).toEqual({ ok: true });
-    expect(getById).toHaveBeenCalledTimes(2);
-    expect(search).toHaveBeenCalledTimes(1);
-    expect(search).toHaveBeenCalledWith("");
   });
 });
