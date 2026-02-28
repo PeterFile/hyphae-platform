@@ -16,21 +16,11 @@ const PROVIDERS: { id: ProviderName; label: string }[] = [
   { id: "payai", label: "PayAI" },
 ];
 
-// Note: Dynamic extraction should happen in page layer and passed here or integrated into store,
-// Since issue says "dynamically extract", we can mock some for the UI and later accept as props.
-const MOCK_CATEGORIES = [
-  "DeFi",
-  "NFT",
-  "Analytics",
-  "Trading",
-  "Infrastructure",
-  "Social",
-];
-
 export function FilterPanel({ className }: { className?: string }) {
   const {
     providers,
     categories,
+    availableCategories,
     priceRange,
     status,
     toggleProvider,
@@ -93,7 +83,7 @@ export function FilterPanel({ className }: { className?: string }) {
       <div className="flex flex-col gap-4">
         <h3 className="text-sm font-medium leading-none">Categories</h3>
         <div className="flex flex-col gap-2.5">
-          {MOCK_CATEGORIES.map((cat) => (
+          {availableCategories.map((cat) => (
             <div key={cat} className="flex items-center space-x-2">
               <Checkbox
                 id={`cat-${cat}`}

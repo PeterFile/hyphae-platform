@@ -18,12 +18,15 @@ import { useCompareStore } from "@/stores/compare-store";
 
 interface AgentCardProps {
   agent: UnifiedAgent;
+  availabilityOverride?: { isOnline: boolean; latencyMs: number };
 }
 
-export function AgentCard({ agent }: AgentCardProps) {
+export function AgentCard({ agent, availabilityOverride }: AgentCardProps) {
   const priceInUsdc = (agent.pricing.amountUsdcCents / 100).toFixed(2);
-  const isOnline = agent.availability.isOnline;
-  const latencyMs = agent.availability.latencyMs;
+  const isOnline =
+    availabilityOverride?.isOnline ?? agent.availability.isOnline;
+  const latencyMs =
+    availabilityOverride?.latencyMs ?? agent.availability.latencyMs ?? 0;
 
   const compareStore = useCompareStore();
   const isSelected = compareStore.selectedIds.includes(
