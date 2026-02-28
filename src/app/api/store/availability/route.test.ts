@@ -35,9 +35,19 @@ function createAgent(id: string, endpointUrl: string): UnifiedAgent {
   };
 }
 
-function buildRequest(id?: string): Request {
-  const query = id ? `?id=${encodeURIComponent(id)}` : "";
-  return new Request(`https://unit.test/api/store/availability${query}`);
+function buildRequest(id?: string, endpointUrl?: string): Request {
+  const params = new URLSearchParams();
+  if (id) {
+    params.set("id", id);
+  }
+  if (endpointUrl) {
+    params.set("endpointUrl", endpointUrl);
+  }
+
+  const query = params.toString();
+  return new Request(
+    `https://unit.test/api/store/availability${query ? `?${query}` : ""}`
+  );
 }
 
 describe("GET /api/store/availability", () => {
@@ -107,6 +117,43 @@ describe("GET /api/store/availability", () => {
 
     expect(response.status).toBe(404);
     expect(checkAvailability).not.toHaveBeenCalled();
+  });
+
+  it("uses endpointUrl directly when provided", async () => {
+    const getById = vi.fn();
+    const checkAvailability = vi.fn().mockResolvedValue({
+      isOnline: true,
+      latencyMs: 9,
+      lastChecked: "2026-02-28T08:00:00.000Z",
+      statusCode: 200,
+    } satisfies AvailabilityResult);
+    const handler = createAvailabilityRouteHandler({
+      adapters: {
+        thirdweb: {
+          getById,
+          checkAvailability,
+        },
+      },
+    });
+
+    const response = await handler(
+      buildRequest(
+        "thirdweb:https%3A%2F%2Fapi.thirdweb.com%2Fv1%2Fresource",
+        "https://example.com/health"
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload).toEqual({
+      isOnline: true,
+      latencyMs: 9,
+      lastChecked: "2026-02-28T08:00:00.000Z",
+    });
+    expect(checkAvailability).toHaveBeenCalledWith(
+      "https://example.com/health"
+    );
+    expect(getById).not.toHaveBeenCalled();
   });
 
   it("returns 422 for localhost/internal endpoint URL", async () => {
