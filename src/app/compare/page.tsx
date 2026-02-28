@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useCompareStore } from "@/stores/compare-store";
 import { UnifiedAgent } from "@/lib/unified-schema";
@@ -10,13 +10,13 @@ import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Suspense } from "react";
+import { buildCompareFetchContext } from "./compare-ids";
 
 function CompareContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const selectedIds = useCompareStore((state) => state.selectedIds);
-  const toggleAgent = useCompareStore((state) => state.toggleAgent);
   const removeAgentStore = useCompareStore((state) => state.removeAgent);
 
   const [agents, setAgents] = useState<UnifiedAgent[]>([]);
@@ -25,24 +25,22 @@ function CompareContent() {
 
   // Read ids from query on initial load or from store
   const idsParam = searchParams.get("ids");
-  const initialIds = idsParam ? idsParam.split(",").filter(Boolean) : [];
-
-  // Use `initialIds` if present in URL, otherwise fallback to `selectedIds` from store
-  const idsToFetch = idsParam !== null ? initialIds : selectedIds;
-
-  useEffect(() => {
-    // If URL has ids, we ensure store has them too (optional, but good for sync)
-    if (idsParam !== null && initialIds.length > 0) {
-      // Sync store to URL if they differ (best effort, to support sharing URL)
-      // For simplicity, we just rely on `idsToFetch` to fetch data.
-    }
-  }, [idsParam, initialIds]);
+  const compareContext = useMemo(
+    () =>
+      buildCompareFetchContext({
+        idsParam,
+        selectedIds,
+      }),
+    [idsParam, selectedIds]
+  );
+  const idsToFetch = compareContext.allIds;
+  const requestIds = compareContext.requestIds;
 
   useEffect(() => {
     let isMounted = true;
 
     async function fetchAgents() {
-      if (idsToFetch.length === 0) {
+      if (requestIds.length === 0) {
         setAgents([]);
         setIsLoading(false);
         return;
@@ -55,7 +53,7 @@ function CompareContent() {
         const res = await fetch("/api/store/compare", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids: idsToFetch.slice(0, 4) }),
+          body: JSON.stringify({ ids: requestIds }),
         });
 
         if (!res.ok) {
@@ -86,7 +84,7 @@ function CompareContent() {
     return () => {
       isMounted = false;
     };
-  }, [idsToFetch]); // Re-fetch on ID change
+  }, [requestIds]); // Re-fetch only when request IDs change
 
   const handleRemove = (id: string) => {
     const parts = id.split(":");
