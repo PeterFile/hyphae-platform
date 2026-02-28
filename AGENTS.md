@@ -59,3 +59,4 @@ Use `pnpm` (lockfile: `pnpm-lock.yaml`).
 
 - Dexter marketplace records currently do not provide a stable explicit id; use `encodeURIComponent(resourceUrl)` as `originalId` and `dexter:${originalId}` as unified id.
 - For best-effort providers, keep API failures non-fatal: retry once, then return mock fallback data with explicit metadata markers so downstream layers can surface degraded mode.
+- Thirdweb `getById()` reads in-memory cache only; for by-id APIs, do one `search("")` warm-up on miss before returning `404`.
