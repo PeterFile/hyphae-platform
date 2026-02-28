@@ -59,4 +59,4 @@ Use `pnpm` (lockfile: `pnpm-lock.yaml`).
 
 - Dexter marketplace records currently do not provide a stable explicit id; use `encodeURIComponent(resourceUrl)` as `originalId` and `dexter:${originalId}` as unified id.
 - For best-effort providers, keep API failures non-fatal: retry once, then return mock fallback data with explicit metadata markers so downstream layers can surface degraded mode.
-- Thirdweb `getById()` must support cold-start lookups (fresh adapter instance). On cache miss, hydrate from discovery before returning `null`, otherwise `/store/thirdweb/[id]` direct visits will 404.
+- Thirdweb `getById()` must support cold-start lookups; on cache miss, hydrate from discovery (for example `search("")`) before returning `null`/`404`, otherwise direct `/store/thirdweb/[id]` access may 404.
