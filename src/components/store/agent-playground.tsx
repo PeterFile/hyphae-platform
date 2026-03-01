@@ -18,6 +18,10 @@ import {
   extractExactEvmPaymentRequirement,
   type ExactEvmPaymentRequirement,
 } from "@/lib/payment/x402";
+import {
+  isPrivyEthereumSignableWallet,
+  type PrivyEthereumSignableWallet,
+} from "@/lib/payment/privy-wallet";
 import { isPrivyEnabled } from "@/lib/payment/privy-config";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,38 +45,11 @@ type UIState =
   | "SUCCESS"
   | "ERROR";
 
-type SignableWallet = {
-  address: string;
-  chainType?: string;
-  walletClientType?: string;
-  getEthereumProvider: () => Promise<{
-    request: (args: { method: string; params: unknown[] }) => Promise<unknown>;
-  }>;
-};
-
 type WalletAuthContext = {
   ready: boolean;
   authenticated: boolean;
-  connectedWallet: SignableWallet | null;
+  connectedWallet: PrivyEthereumSignableWallet | null;
 };
-
-function isSignableWallet(wallet: unknown): wallet is SignableWallet {
-  if (!wallet || typeof wallet !== "object") {
-    return false;
-  }
-
-  const candidate = wallet as {
-    address?: unknown;
-    chainType?: unknown;
-    getEthereumProvider?: unknown;
-  };
-
-  return (
-    typeof candidate.address === "string" &&
-    candidate.chainType === "ethereum" &&
-    typeof candidate.getEthereumProvider === "function"
-  );
-}
 
 function shortenAddress(address: string): string {
   if (address.length <= 12) {
@@ -83,7 +60,7 @@ function shortenAddress(address: string): string {
 }
 
 async function signExactPaymentWithWallet(
-  wallet: SignableWallet,
+  wallet: PrivyEthereumSignableWallet,
   requirement: ExactEvmPaymentRequirement
 ): Promise<{ headerName: "X-PAYMENT"; value: string }> {
   const authorization = buildEip3009Authorization({
@@ -123,7 +100,9 @@ function AgentPlaygroundWithPrivy({ agent }: AgentPlaygroundProps) {
   const { wallets } = useWallets();
 
   const connectedWallet = useMemo(() => {
-    const wallet = wallets.find((entry) => isSignableWallet(entry));
+    const wallet = wallets.find((entry) =>
+      isPrivyEthereumSignableWallet(entry)
+    );
     return wallet ?? null;
   }, [wallets]);
 

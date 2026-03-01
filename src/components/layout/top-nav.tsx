@@ -2,33 +2,18 @@
 
 import Link from "next/link";
 import { Wallet } from "lucide-react";
+import { useState } from "react";
 import { useConnectWallet, usePrivy, useWallets } from "@privy-io/react-auth";
 
 import { Button } from "@/components/ui/button";
+import { ensurePrivyWalletAuthenticated } from "@/lib/payment/privy-wallet-auth";
+import {
+  isPrivyEthereumSignableWallet,
+  type PrivyEthereumSignableWallet,
+} from "@/lib/payment/privy-wallet";
 import { isPrivyEnabled } from "@/lib/payment/privy-config";
 
 const PRIVY_ENABLED = isPrivyEnabled();
-
-type SignableWallet = {
-  address: string;
-  getEthereumProvider?: unknown;
-};
-
-function isSignableWallet(wallet: unknown): wallet is SignableWallet {
-  if (!wallet || typeof wallet !== "object") {
-    return false;
-  }
-
-  const candidate = wallet as {
-    address?: unknown;
-    getEthereumProvider?: unknown;
-  };
-
-  return (
-    typeof candidate.address === "string" &&
-    typeof candidate.getEthereumProvider === "function"
-  );
-}
 
 function shortenAddress(address: string): string {
   if (address.length <= 12) {
@@ -40,10 +25,48 @@ function shortenAddress(address: string): string {
 
 function WalletAuthButton() {
   const { ready, authenticated, logout } = usePrivy();
-  const { connectWallet } = useConnectWallet();
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+
+  const authenticateWallet = async (
+    wallet: PrivyEthereumSignableWallet | null
+  ) => {
+    if (isAuthenticating) {
+      return false;
+    }
+
+    setIsAuthenticating(true);
+    try {
+      return await ensurePrivyWalletAuthenticated(wallet);
+    } catch (error) {
+      console.error("Failed to complete wallet authentication", error);
+      return false;
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
+
+  const { connectWallet } = useConnectWallet({
+    onSuccess: ({ wallet }) => {
+      void authenticateWallet(
+        isPrivyEthereumSignableWallet(wallet) ? wallet : null
+      );
+    },
+  });
   const { wallets } = useWallets();
 
-  const connectedWallet = wallets.find((wallet) => isSignableWallet(wallet));
+  const connectedWallet = wallets.find((wallet) =>
+    isPrivyEthereumSignableWallet(wallet)
+  );
+
+  const handleConnectWallet = async () => {
+    const didAuthenticateConnectedWallet = await authenticateWallet(
+      connectedWallet ?? null
+    );
+
+    if (!didAuthenticateConnectedWallet) {
+      connectWallet();
+    }
+  };
 
   if (!ready) {
     return (
@@ -55,9 +78,14 @@ function WalletAuthButton() {
 
   if (!authenticated || !connectedWallet) {
     return (
-      <Button type="button" size="sm" onClick={() => connectWallet()}>
+      <Button
+        type="button"
+        size="sm"
+        disabled={isAuthenticating}
+        onClick={() => void handleConnectWallet()}
+      >
         <Wallet className="mr-2 h-4 w-4" />
-        Connect Wallet
+        {isAuthenticating ? "Authenticating..." : "Connect Wallet"}
       </Button>
     );
   }
