@@ -7,12 +7,23 @@ import { Input } from "@/components/ui/input";
 import { useFilterStore } from "@/stores/filter-store";
 import { cn } from "@/lib/utils";
 
+export function shouldSyncLocalQueryFromGlobal({
+  prevGlobalQuery,
+  nextGlobalQuery,
+}: {
+  prevGlobalQuery: string;
+  nextGlobalQuery: string;
+}): boolean {
+  return prevGlobalQuery !== nextGlobalQuery;
+}
+
 export function SearchBar({ className }: { className?: string }) {
   const query = useFilterStore((state) => state.query);
   const setQuery = useFilterStore((state) => state.setQuery);
 
   const [localQuery, setLocalQuery] = React.useState(query);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const prevGlobalQueryRef = React.useRef(query);
 
   // Sync to store with generic debounce
   React.useEffect(() => {
@@ -22,12 +33,18 @@ export function SearchBar({ className }: { className?: string }) {
     return () => clearTimeout(timer);
   }, [localQuery, setQuery]);
 
-  // If global query resets (e.g. from Clear All), update local
+  // Sync local input only when global query actually changes
   React.useEffect(() => {
-    if (query === "" && localQuery !== "") {
-      setLocalQuery("");
+    if (
+      shouldSyncLocalQueryFromGlobal({
+        prevGlobalQuery: prevGlobalQueryRef.current,
+        nextGlobalQuery: query,
+      })
+    ) {
+      setLocalQuery((prev) => (prev === query ? prev : query));
     }
-  }, [query, localQuery]);
+    prevGlobalQueryRef.current = query;
+  }, [query]);
 
   // Shortcut to focus search bar
   React.useEffect(() => {
