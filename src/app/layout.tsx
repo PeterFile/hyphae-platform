@@ -3,6 +3,7 @@ import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ReactQueryProvider } from "./query-provider";
 import { CompareFloatingBar } from "@/components/store/compare-floating-bar";
+import { TopNav } from "@/components/layout/top-nav";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -23,6 +24,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${spaceGrotesk.variable} antialiased`}>
         <ReactQueryProvider>
+          <TopNav />
           {children}
           <CompareFloatingBar />
         </ReactQueryProvider>

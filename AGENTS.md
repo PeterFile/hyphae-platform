@@ -60,3 +60,8 @@ Use `pnpm` (lockfile: `pnpm-lock.yaml`).
 - Dexter marketplace records currently do not provide a stable explicit id; use `encodeURIComponent(resourceUrl)` as `originalId` and `dexter:${originalId}` as unified id.
 - For best-effort providers, keep API failures non-fatal: retry once, then return mock fallback data with explicit metadata markers so downstream layers can surface degraded mode.
 - Thirdweb `getById()` should cold-start hydrate discovery cache, but discovery is still paginated; keep `/api/store/invoke` fail-fast with `provider_not_invokable_yet` until lookup stability is guaranteed without pagination misses.
+
+## Wallet Test Flow
+
+- `src/components/store/agent-playground.tsx` wraps itself with `PrivyProvider` only when `NEXT_PUBLIC_PRIVY_APP_ID` is set, and forces wallet-only login (`loginMethods: ["wallet"]`) with no social methods.
+- In Playground 402 retry flow, sign from `body.accepts` exact-EVM requirement (`payTo`, `asset`, `maxAmountRequired`); if env is missing, fallback stays burner-only and is expected to remain demo-grade.
