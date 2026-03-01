@@ -6,11 +6,11 @@
 
 ## 主要功能
 
-- **智能体商店 (Store)**：多维度过滤（价格、可用性等）和浏览智能体。
+- **智能体商店 (Store) & 统一搜索**：多维度过滤（价格、可用性等）和跨服务商（Coinbase, Thirdweb, Dexter, PayAI）的智能体搜索与发现。
 - **工作台交互 (Playground)**：提供沉浸式的智能体对话与测试环境。
-- **直接调用 (Invoke)**：一键调用智能体执行特定任务并获知运行结果。
 - **多维度对比 (Compare)**：一键加入对比清单，横向评估不同智能体。
-- **Web3 与支付集成**：通过 Coinbase Adapter 提供钱包连接与 Burner Wallet 支付功能。
+- **Web3 与支付集成**：原生兼容 L2 网络，支持基于 Privy 的钱包连接、X-402 协议鉴权与 Coinbase Burner Wallet 的免密支付体验。
+- **开发者网关 (Gateway)**：为开发者提供接入与调试各类外部大模型的统一指南与基础设施支撑。
 
 ## 安装与运行步骤
 
@@ -42,6 +42,8 @@ pnpm run dev
 
 - 框架：Next.js 14 (App Router)
 - 语言：TypeScript
-- 样式：Tailwind CSS
+- 样式：Tailwind CSS / shadcn/ui
 - 状态管理：Zustand
-- 钱包集成：Thirdweb SDK, Coinbase Adapter
+- 钱包集成与 Web3：Thirdweb SDK, Privy
+- 多服务商适配层：Coinbase (CDP), Dexter, PayAI, Thirdweb Adapter
+- 支付协议：x-402 鉴权与 Burner Wallet
