@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { Wallet } from "lucide-react";
+import { useState } from "react";
 import { useConnectWallet, usePrivy, useWallets } from "@privy-io/react-auth";
 
 import { Button } from "@/components/ui/button";
+import { ensurePrivyWalletAuthenticated } from "@/lib/payment/privy-wallet-auth";
 import { isPrivyEnabled } from "@/lib/payment/privy-config";
 
 const PRIVY_ENABLED = isPrivyEnabled();
@@ -12,6 +14,7 @@ const PRIVY_ENABLED = isPrivyEnabled();
 type SignableWallet = {
   address: string;
   getEthereumProvider?: unknown;
+  loginOrLink?: unknown;
 };
 
 function isSignableWallet(wallet: unknown): wallet is SignableWallet {
@@ -40,10 +43,42 @@ function shortenAddress(address: string): string {
 
 function WalletAuthButton() {
   const { ready, authenticated, logout } = usePrivy();
-  const { connectWallet } = useConnectWallet();
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+
+  const authenticateWallet = async (wallet: SignableWallet | null) => {
+    if (isAuthenticating) {
+      return false;
+    }
+
+    setIsAuthenticating(true);
+    try {
+      return await ensurePrivyWalletAuthenticated(wallet);
+    } catch (error) {
+      console.error("Failed to complete wallet authentication", error);
+      return false;
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
+
+  const { connectWallet } = useConnectWallet({
+    onSuccess: ({ wallet }) => {
+      void authenticateWallet(isSignableWallet(wallet) ? wallet : null);
+    },
+  });
   const { wallets } = useWallets();
 
   const connectedWallet = wallets.find((wallet) => isSignableWallet(wallet));
+
+  const handleConnectWallet = async () => {
+    const didAuthenticateConnectedWallet = await authenticateWallet(
+      connectedWallet ?? null
+    );
+
+    if (!didAuthenticateConnectedWallet) {
+      connectWallet();
+    }
+  };
 
   if (!ready) {
     return (
@@ -55,9 +90,14 @@ function WalletAuthButton() {
 
   if (!authenticated || !connectedWallet) {
     return (
-      <Button type="button" size="sm" onClick={() => connectWallet()}>
+      <Button
+        type="button"
+        size="sm"
+        disabled={isAuthenticating}
+        onClick={() => void handleConnectWallet()}
+      >
         <Wallet className="mr-2 h-4 w-4" />
-        Connect Wallet
+        {isAuthenticating ? "Authenticating..." : "Connect Wallet"}
       </Button>
     );
   }
