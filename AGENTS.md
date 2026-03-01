@@ -66,3 +66,4 @@ Use `pnpm` (lockfile: `pnpm-lock.yaml`).
 - `src/components/store/agent-playground.tsx` wraps itself with `PrivyProvider` only when `NEXT_PUBLIC_PRIVY_APP_ID` is set, and forces wallet-only login (`loginMethods: ["wallet"]`) with no social methods.
 - In Playground 402 retry flow, sign from `body.accepts` exact-EVM requirement (`payTo`, `asset`, `maxAmountRequired`); if env is missing, fallback stays burner-only and is expected to remain demo-grade.
 - In Privy external wallet UX, `connectWallet()` only establishes wallet connection; it does not guarantee `authenticated === true`. If UI state depends on `authenticated`, trigger `connectedWallet.loginOrLink()` to complete SIWE auth/link.
+- Reuse `isPrivyEthereumSignableWallet` (`src/lib/payment/privy-wallet.ts`) across wallet-aware UI (`TopNav`, `AgentPlayground`) to avoid diverging wallet detection rules (`type`/`chainType` may vary by wallet client).

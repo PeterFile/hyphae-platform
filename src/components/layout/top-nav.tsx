@@ -7,31 +7,13 @@ import { useConnectWallet, usePrivy, useWallets } from "@privy-io/react-auth";
 
 import { Button } from "@/components/ui/button";
 import { ensurePrivyWalletAuthenticated } from "@/lib/payment/privy-wallet-auth";
+import {
+  isPrivyEthereumSignableWallet,
+  type PrivyEthereumSignableWallet,
+} from "@/lib/payment/privy-wallet";
 import { isPrivyEnabled } from "@/lib/payment/privy-config";
 
 const PRIVY_ENABLED = isPrivyEnabled();
-
-type SignableWallet = {
-  address: string;
-  getEthereumProvider?: unknown;
-  loginOrLink?: unknown;
-};
-
-function isSignableWallet(wallet: unknown): wallet is SignableWallet {
-  if (!wallet || typeof wallet !== "object") {
-    return false;
-  }
-
-  const candidate = wallet as {
-    address?: unknown;
-    getEthereumProvider?: unknown;
-  };
-
-  return (
-    typeof candidate.address === "string" &&
-    typeof candidate.getEthereumProvider === "function"
-  );
-}
 
 function shortenAddress(address: string): string {
   if (address.length <= 12) {
@@ -45,7 +27,9 @@ function WalletAuthButton() {
   const { ready, authenticated, logout } = usePrivy();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  const authenticateWallet = async (wallet: SignableWallet | null) => {
+  const authenticateWallet = async (
+    wallet: PrivyEthereumSignableWallet | null
+  ) => {
     if (isAuthenticating) {
       return false;
     }
@@ -63,12 +47,16 @@ function WalletAuthButton() {
 
   const { connectWallet } = useConnectWallet({
     onSuccess: ({ wallet }) => {
-      void authenticateWallet(isSignableWallet(wallet) ? wallet : null);
+      void authenticateWallet(
+        isPrivyEthereumSignableWallet(wallet) ? wallet : null
+      );
     },
   });
   const { wallets } = useWallets();
 
-  const connectedWallet = wallets.find((wallet) => isSignableWallet(wallet));
+  const connectedWallet = wallets.find((wallet) =>
+    isPrivyEthereumSignableWallet(wallet)
+  );
 
   const handleConnectWallet = async () => {
     const didAuthenticateConnectedWallet = await authenticateWallet(
