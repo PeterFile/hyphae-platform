@@ -82,12 +82,17 @@ function buildOriginalId(resourceUrl: string): string {
   return encodeURIComponent(resourceUrl);
 }
 
-function parseDexterUnifiedId(id: string): string | null {
-  if (!id.startsWith("dexter:")) {
+function parseDexterLookupId(id: string): string | null {
+  const normalizedId = id.trim();
+  if (normalizedId.length === 0) {
     return null;
   }
 
-  const originalId = id.slice("dexter:".length).trim();
+  if (!normalizedId.startsWith("dexter:")) {
+    return normalizedId;
+  }
+
+  const originalId = normalizedId.slice("dexter:".length).trim();
 
   if (originalId.length === 0) {
     return null;
@@ -219,11 +224,16 @@ export class DexterAdapter implements ProviderAdapter {
   }
 
   public async getById(id: string): Promise<UnifiedAgent | null> {
-    const originalId = parseDexterUnifiedId(id);
+    const lookupId = parseDexterLookupId(id);
 
-    if (!originalId) {
+    if (!lookupId) {
       return null;
     }
+
+    const originalId =
+      lookupId.startsWith("http://") || lookupId.startsWith("https://")
+        ? buildOriginalId(lookupId)
+        : lookupId;
 
     const { resources, source, note } = await this.fetchResourcesBestEffort();
     const matchedResource = resources.find(
