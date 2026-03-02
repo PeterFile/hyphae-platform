@@ -28,6 +28,13 @@ export interface FilterActions {
 
 export type FilterStore = FilterState & FilterActions;
 
+function normalizeSort(
+  sort: FilterState["sort"] | undefined
+): FilterState["sort"] {
+  if (sort === "availability") return "relevance";
+  return sort ?? "relevance";
+}
+
 const defaultProviders: ProviderName[] = [
   "coinbase",
   "thirdweb",
@@ -64,7 +71,7 @@ export const useFilterStore = create<FilterStore>()(
         set({ availableCategories }),
       setPriceRange: (priceRange) => set({ priceRange, page: 1 }),
       setStatus: (status) => set({ status, page: 1 }),
-      setSort: (sort) => set({ sort, page: 1 }),
+      setSort: (sort) => set({ sort: normalizeSort(sort), page: 1 }),
       setPage: (page) => set({ page }),
       nextPage: () => set((state) => ({ page: state.page + 1 })),
       resetAll: () => set(initialState),
@@ -75,8 +82,16 @@ export const useFilterStore = create<FilterStore>()(
         providers: state.providers,
         priceRange: state.priceRange,
         status: state.status,
-        sort: state.sort,
+        sort: normalizeSort(state.sort),
       }),
+      merge: (persistedState, currentState) => {
+        const persisted = (persistedState ?? {}) as Partial<FilterState>;
+        return {
+          ...currentState,
+          ...persisted,
+          sort: normalizeSort(persisted.sort ?? currentState.sort),
+        };
+      },
     }
   )
 );

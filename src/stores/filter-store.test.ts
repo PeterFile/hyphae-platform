@@ -48,6 +48,11 @@ describe("useFilterStore", () => {
     expect(useFilterStore.getState().page).toBe(4);
   });
 
+  it("should fallback availability sort to relevance", () => {
+    useFilterStore.getState().setSort("availability");
+    expect(useFilterStore.getState().sort).toBe("relevance");
+  });
+
   it("should reset all", () => {
     useFilterStore.getState().setQuery("search");
     useFilterStore.getState().setPage(10);
