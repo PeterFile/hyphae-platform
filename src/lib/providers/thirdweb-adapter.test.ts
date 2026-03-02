@@ -48,6 +48,18 @@ function buildDiscoveryResponse(
   };
 }
 
+function toRequestUrl(input: URL | RequestInfo): URL {
+  if (typeof input === "string") {
+    return new URL(input);
+  }
+
+  if (input instanceof URL) {
+    return input;
+  }
+
+  return new URL(input.url);
+}
+
 describe("ThirdwebAdapter", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -103,8 +115,8 @@ describe("ThirdwebAdapter", () => {
 
   it("auto-paginates when page/pageSize are missing", async () => {
     const total = 45;
-    const fetchMock = vi.fn(async (requestUrl: string) => {
-      const parsedUrl = new URL(requestUrl);
+    const fetchMock = vi.fn(async (input: URL | RequestInfo) => {
+      const parsedUrl = toRequestUrl(input);
       const offset = Number(parsedUrl.searchParams.get("offset") ?? "0");
       const limit = Number(parsedUrl.searchParams.get("limit") ?? "20");
       const count = Math.max(0, Math.min(limit, total - offset));
@@ -133,15 +145,15 @@ describe("ThirdwebAdapter", () => {
     expect(result).toHaveLength(45);
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(
-      fetchMock.mock.calls.map(([requestUrl]) =>
-        new URL(requestUrl as string).searchParams.get("offset")
+      fetchMock.mock.calls.map(([input]) =>
+        toRequestUrl(input as URL | RequestInfo).searchParams.get("offset")
       )
     ).toEqual(["0", "20", "40"]);
   });
 
   it("caps auto-pagination to avoid unbounded fetches", async () => {
-    const fetchMock = vi.fn(async (requestUrl: string) => {
-      const parsedUrl = new URL(requestUrl);
+    const fetchMock = vi.fn(async (input: URL | RequestInfo) => {
+      const parsedUrl = toRequestUrl(input);
       const offset = Number(parsedUrl.searchParams.get("offset") ?? "0");
       const limit = Number(parsedUrl.searchParams.get("limit") ?? "20");
 
