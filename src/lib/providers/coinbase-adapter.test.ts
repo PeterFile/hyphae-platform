@@ -149,6 +149,38 @@ describe("CoinbaseAdapter", () => {
     expect(found?.originalId).toBe("https://api.example.com/target");
   });
 
+  it("getById() accepts URL-encoded ids from store detail routes", async () => {
+    const targetUrl = "https://api.example.com/target/deep/path";
+    const target = createResource({
+      resource: targetUrl,
+    });
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            x402Version: 2,
+            items: [createResource(), target],
+          }),
+          { status: 200 }
+        )
+      )
+    );
+
+    const adapter = new CoinbaseAdapter({
+      facilitatorUrl: "https://api.cdp.coinbase.com/platform/v2/x402",
+      fetchImpl: fetchMock,
+    });
+
+    const encodedId = encodeURIComponent(targetUrl);
+    const foundFromEncoded = await adapter.getById(encodedId);
+    const foundFromPrefixedEncoded = await adapter.getById(
+      `coinbase:${encodedId}`
+    );
+
+    expect(foundFromEncoded?.originalId).toBe(targetUrl);
+    expect(foundFromPrefixedEncoded?.originalId).toBe(targetUrl);
+  });
+
   it("checkAvailability() delegates to availability checker", async () => {
     const checker = vi.fn().mockResolvedValue({
       isOnline: true,

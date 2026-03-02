@@ -127,6 +127,19 @@ function stripTrailingSlash(value: string): string {
   return value.replace(/\/+$/, "");
 }
 
+function decodeLookupIdSafely(value: string): string | null {
+  if (!value.includes("%")) {
+    return null;
+  }
+
+  try {
+    const decoded = decodeURIComponent(value);
+    return decoded === value ? null : decoded;
+  } catch {
+    return null;
+  }
+}
+
 export function resolveCoinbaseFacilitatorUrl(
   env: AdapterEnv = process.env
 ): string {
@@ -434,10 +447,16 @@ export class CoinbaseAdapter implements ProviderAdapter {
     const resourceId = normalizedId.startsWith("coinbase:")
       ? normalizedId.slice("coinbase:".length)
       : normalizedId;
+    const resourceCandidates = new Set<string>([resourceId]);
+    const decodedResourceId = decodeLookupIdSafely(resourceId);
+
+    if (decodedResourceId) {
+      resourceCandidates.add(decodedResourceId);
+    }
 
     const resources = await this.fetchDiscoveryResources();
-    const found = resources.find(
-      (resource) => resource.resource === resourceId
+    const found = resources.find((resource) =>
+      resourceCandidates.has(resource.resource)
     );
 
     if (!found) {
