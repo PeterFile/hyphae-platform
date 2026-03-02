@@ -76,10 +76,11 @@ export function StoreContent({ initialData }: StoreContentProps) {
       if (
         sortParam === "relevance" ||
         sortParam === "price-asc" ||
-        sortParam === "price-desc" ||
-        sortParam === "availability"
+        sortParam === "price-desc"
       ) {
         setSort(sortParam);
+      } else if (sortParam === "availability") {
+        setSort("relevance");
       }
     }
   }, [searchParams, setQuery, setCategories, setSort]);
@@ -198,7 +199,6 @@ export function StoreContent({ initialData }: StoreContentProps) {
             <option value="relevance">Relevance</option>
             <option value="price-asc">Price: Low to High</option>
             <option value="price-desc">Price: High to Low</option>
-            <option value="availability">Availability</option>
           </select>
         </div>
       </div>

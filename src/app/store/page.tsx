@@ -30,6 +30,7 @@ async function getInitialSearchData(searchParams: {
     const sortMap: Record<string, string> = {
       "price-asc": "price_asc",
       "price-desc": "price_desc",
+      availability: "relevance",
     };
 
     const params = new URLSearchParams();
