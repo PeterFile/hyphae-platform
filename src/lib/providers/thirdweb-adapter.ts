@@ -61,9 +61,18 @@ type ThirdwebAdapterOptions = {
   fetchFn?: typeof fetch;
 };
 
+type ThirdwebParsedPage = {
+  agents: UnifiedAgent[];
+  itemCount: number;
+  total?: number;
+};
+
 const DEFAULT_DISCOVERY_ENDPOINT =
   "https://api.thirdweb.com/v1/payments/x402/discovery/resources";
 const DEFAULT_LIMIT = 20;
+const MAX_ITEMS = 200;
+const MAX_PAGES = 10;
+const TIME_BUDGET_MS = 3000;
 const MAX_ERROR_LOG = 20;
 const DEFAULT_UNKNOWN_ENDPOINT = "https://nexus.thirdweb.com/unknown";
 
@@ -297,41 +306,14 @@ export class ThirdwebAdapter implements ProviderAdapter {
     const secretKey = this.secretKey ?? process.env.THIRDWEB_SECRET_KEY;
 
     if (!secretKey) {
-      this.recordError("THIRDWEB_SECRET_KEY is missing");
-      return [];
+      const message = "THIRDWEB_SECRET_KEY is missing";
+      this.recordError(message);
+      throw new Error(message);
     }
 
-    const discoveryUrl = this.buildDiscoveryUrl(query, filters);
-    let response: Response;
-
-    try {
-      response = await this.fetchWithRetry(discoveryUrl, {
-        method: "GET",
-        headers: {
-          "x-client-id": secretKey,
-        },
-      });
-    } catch (error) {
-      this.recordError("thirdweb discovery request failed", error);
-      return [];
-    }
-
-    if (!response.ok) {
-      this.recordError(
-        `thirdweb discovery request failed with status ${response.status}`
-      );
-      return [];
-    }
-
-    let payload: unknown;
-    try {
-      payload = await response.json();
-    } catch (error) {
-      this.recordError("thirdweb discovery response is not valid JSON", error);
-      return [];
-    }
-
-    const normalizedAgents = this.parseAndNormalizePayload(payload);
+    const normalizedAgents = this.hasExplicitPagination(filters)
+      ? await this.searchSinglePage(query, filters, secretKey)
+      : await this.searchAllPages(query, filters, secretKey);
     const filteredAgents = this.applyFilters(normalizedAgents, filters);
     this.cacheResults(filteredAgents);
     return filteredAgents;
@@ -464,16 +446,31 @@ export class ThirdwebAdapter implements ProviderAdapter {
     });
   }
 
-  private parseAndNormalizePayload(payload: unknown): UnifiedAgent[] {
+  private parseAndNormalizePayload(
+    payload: unknown,
+    indexOffset = 0
+  ): ThirdwebParsedPage {
     if (!isObjectRecord(payload) || !Array.isArray(payload.items)) {
       this.recordError("thirdweb discovery response missing items");
-      return [];
+      return {
+        agents: [],
+        itemCount: 0,
+      };
     }
 
     const response = payload as Partial<ThirdwebDiscoveryResponse>;
-    return (response.items ?? [])
+    const items = (response.items ?? [])
       .map((item) => coerceDiscoveryItem(item))
-      .map((item, index) => this.normalize(item, index));
+      .map((item, index) => this.normalize(item, indexOffset + index));
+    const pagination = isObjectRecord(response.pagination)
+      ? response.pagination
+      : undefined;
+
+    return {
+      agents: items,
+      itemCount: items.length,
+      total: readPositiveNumber(pagination, "total"),
+    };
   }
 
   private applyFilters(
@@ -524,6 +521,80 @@ export class ThirdwebAdapter implements ProviderAdapter {
     }
   }
 
+  private hasExplicitPagination(filters: SearchFilters): boolean {
+    return filters.page !== undefined || filters.pageSize !== undefined;
+  }
+
+  private async searchSinglePage(
+    query: string,
+    filters: SearchFilters,
+    secretKey: string
+  ): Promise<UnifiedAgent[]> {
+    const page = await this.fetchDiscoveryPage(query, filters, secretKey, 0);
+    return page?.agents ?? [];
+  }
+
+  private async searchAllPages(
+    query: string,
+    filters: SearchFilters,
+    secretKey: string
+  ): Promise<UnifiedAgent[]> {
+    const startedAt = Date.now();
+    const unifiedAgents: UnifiedAgent[] = [];
+    let page = 1;
+    let discoveredTotal: number | undefined;
+
+    while (page <= MAX_PAGES && unifiedAgents.length < MAX_ITEMS) {
+      if (Date.now() - startedAt >= TIME_BUDGET_MS) {
+        break;
+      }
+
+      const pageResult = await this.fetchDiscoveryPage(
+        query,
+        {
+          ...filters,
+          page,
+          pageSize: DEFAULT_LIMIT,
+        },
+        secretKey,
+        unifiedAgents.length
+      );
+
+      if (!pageResult) {
+        if (unifiedAgents.length === 0) {
+          return [];
+        }
+        break;
+      }
+
+      if (pageResult.itemCount === 0) {
+        break;
+      }
+
+      unifiedAgents.push(...pageResult.agents);
+      if (pageResult.total !== undefined) {
+        discoveredTotal = pageResult.total;
+      }
+
+      if (unifiedAgents.length >= MAX_ITEMS) {
+        break;
+      }
+
+      if (pageResult.itemCount < DEFAULT_LIMIT) {
+        break;
+      }
+
+      const loadedByPage = page * DEFAULT_LIMIT;
+      if (discoveredTotal !== undefined && loadedByPage >= discoveredTotal) {
+        break;
+      }
+
+      page += 1;
+    }
+
+    return unifiedAgents.slice(0, MAX_ITEMS);
+  }
+
   private buildDiscoveryUrl(query: string, filters: SearchFilters): string {
     const searchQuery =
       query.trim().length > 0 ? query.trim() : (filters.q ?? "");
@@ -550,6 +621,45 @@ export class ThirdwebAdapter implements ProviderAdapter {
       const sanitized = sanitizeId(resourceUrl);
       return sanitized === "unknown" ? `resource-${index + 1}` : sanitized;
     }
+  }
+
+  private async fetchDiscoveryPage(
+    query: string,
+    filters: SearchFilters,
+    secretKey: string,
+    indexOffset: number
+  ): Promise<ThirdwebParsedPage | null> {
+    const discoveryUrl = this.buildDiscoveryUrl(query, filters);
+    let response: Response;
+
+    try {
+      response = await this.fetchWithRetry(discoveryUrl, {
+        method: "GET",
+        headers: {
+          "x-client-id": secretKey,
+        },
+      });
+    } catch (error) {
+      this.recordError("thirdweb discovery request failed", error);
+      return null;
+    }
+
+    if (!response.ok) {
+      this.recordError(
+        `thirdweb discovery request failed with status ${response.status}`
+      );
+      return null;
+    }
+
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      this.recordError("thirdweb discovery response is not valid JSON", error);
+      return null;
+    }
+
+    return this.parseAndNormalizePayload(payload, indexOffset);
   }
 
   private async fetchWithRetry(
