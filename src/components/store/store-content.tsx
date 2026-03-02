@@ -105,6 +105,7 @@ export function StoreContent({ initialData }: StoreContentProps) {
   const {
     agents: rawAgents,
     totalCount,
+    facets,
     isLoading,
     isFetchingNextPage,
     hasNextPage,
@@ -140,18 +141,19 @@ export function StoreContent({ initialData }: StoreContentProps) {
     return baseAgents;
   }, [rawAgents, initialData, status]);
 
-  // Extract unique categories from results and sync to store
+  // Sync categories from server-side facets to avoid page-by-page drift.
   const extractedCategories = React.useMemo(() => {
-    const base =
-      rawAgents.length > 0 ? rawAgents : (initialData?.results ?? []);
-    const cats = [...new Set(base.map((a) => a.category).filter(Boolean))];
-    return cats.sort();
-  }, [rawAgents, initialData]);
+    const categoryCounts =
+      facets?.categoryCounts ?? initialData?.facets?.categoryCounts ?? {};
+
+    return Object.entries(categoryCounts)
+      .filter(([, count]) => count > 0)
+      .map(([category]) => category);
+  }, [facets, initialData]);
 
   // Guard with a ref to avoid triggering store updates on every render
   const prevCategoriesRef = React.useRef<string>("");
   React.useEffect(() => {
-    if (extractedCategories.length === 0) return;
     const next = extractedCategories.join(",");
     if (next !== prevCategoriesRef.current) {
       prevCategoriesRef.current = next;

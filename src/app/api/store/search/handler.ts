@@ -13,6 +13,7 @@ import {
   type SearchFilters,
 } from "@/lib/providers/types";
 import { PayAIAdapter } from "@/lib/providers/payai-adapter";
+import type { UnifiedAgent } from "@/lib/unified-schema";
 
 const CACHE_TTL_MS = 60_000;
 const DEFAULT_PAGE = 1;
@@ -61,6 +62,12 @@ type RegistryLike = Pick<AdapterRegistry, "searchAll">;
 type SearchCacheEntry = {
   expiresAt: number;
   response: SearchAllResponse;
+};
+
+type SearchFacets = {
+  providerCounts: Record<string, number>;
+  categoryCounts: Record<string, number>;
+  tagCounts: Record<string, number>;
 };
 
 const searchCache = new Map<string, SearchCacheEntry>();
@@ -183,6 +190,46 @@ function paginate<T>(results: T[], page: number, pageSize: number): T[] {
   return results.slice(start, start + pageSize);
 }
 
+function normalizeFacetKey(value: string): string | null {
+  const normalized = value.trim().toLowerCase();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function incrementCount(counts: Map<string, number>, key: string | null): void {
+  if (key === null) {
+    return;
+  }
+
+  counts.set(key, (counts.get(key) ?? 0) + 1);
+}
+
+function toSortedRecord(counts: Map<string, number>): Record<string, number> {
+  return Object.fromEntries(
+    [...counts.entries()].sort(([left], [right]) => left.localeCompare(right))
+  );
+}
+
+function buildFacets(results: UnifiedAgent[]): SearchFacets {
+  const providerCounts = new Map<string, number>();
+  const categoryCounts = new Map<string, number>();
+  const tagCounts = new Map<string, number>();
+
+  for (const agent of results) {
+    incrementCount(providerCounts, normalizeFacetKey(agent.provider));
+    incrementCount(categoryCounts, normalizeFacetKey(agent.category));
+
+    for (const tag of agent.tags) {
+      incrementCount(tagCounts, normalizeFacetKey(tag));
+    }
+  }
+
+  return {
+    providerCounts: toSortedRecord(providerCounts),
+    categoryCounts: toSortedRecord(categoryCounts),
+    tagCounts: toSortedRecord(tagCounts),
+  };
+}
+
 function cleanupExpiredCacheEntries(now: number): void {
   for (const [key, entry] of searchCache.entries()) {
     if (entry.expiresAt <= now) {
@@ -255,6 +302,7 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   const totalCount = aggregated.results.length;
+  const facets = buildFacets(aggregated.results);
   const paginatedResults = paginate(
     aggregated.results,
     query.page,
@@ -270,6 +318,7 @@ export async function GET(request: Request): Promise<Response> {
         page: query.page,
         pageSize: query.pageSize,
         errors: aggregated.errors,
+        facets,
       },
       { status: 500 }
     );
@@ -282,6 +331,7 @@ export async function GET(request: Request): Promise<Response> {
       page: query.page,
       pageSize: query.pageSize,
       errors: aggregated.errors,
+      facets,
     },
     { status: 200 }
   );

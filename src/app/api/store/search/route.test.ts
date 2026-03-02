@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ProviderName } from "@/lib/providers/types";
 import type { UnifiedAgent } from "@/lib/unified-schema";
 
 import { GET } from "./route";
@@ -8,11 +9,17 @@ import {
   __setRegistryFactoryForTests,
 } from "./handler";
 
-function createAgent(id: string): UnifiedAgent {
+function createAgent(
+  id: string,
+  overrides: Partial<UnifiedAgent> = {}
+): UnifiedAgent {
+  const [providerPrefix = "coinbase", originalId = id] = id.split(":");
+  const provider = providerPrefix as ProviderName;
+
   return {
     id,
-    provider: "coinbase",
-    originalId: id.replace("coinbase:", ""),
+    provider,
+    originalId,
     name: id,
     description: "test agent",
     category: "General",
@@ -32,6 +39,7 @@ function createAgent(id: string): UnifiedAgent {
       lastChecked: "2026-02-26T00:00:00.000Z",
       statusCode: 200,
     },
+    ...overrides,
   };
 }
 
@@ -85,12 +93,21 @@ describe("GET /api/store/search", () => {
     expect(payload.results).toHaveLength(1);
   });
 
-  it("returns paginated response with totalCount/page/pageSize", async () => {
+  it("returns paginated response with facets and totalCount/page/pageSize", async () => {
     const searchAll = vi.fn().mockResolvedValue({
       results: [
-        createAgent("coinbase:a1"),
-        createAgent("coinbase:a2"),
-        createAgent("coinbase:a3"),
+        createAgent("coinbase:a1", {
+          category: " General ",
+          tags: ["Utility", "  dev-tools "],
+        }),
+        createAgent("thirdweb:a2", {
+          category: "general",
+          tags: ["DEV-TOOLS", "vision"],
+        }),
+        createAgent("coinbase:a3", {
+          category: "Tools",
+          tags: ["Vision"],
+        }),
       ],
       errors: [],
     });
@@ -104,12 +121,76 @@ describe("GET /api/store/search", () => {
 
     expect(response.status).toBe(200);
     expect(payload).toEqual({
-      results: [expect.objectContaining({ id: "coinbase:a2" })],
+      results: [expect.objectContaining({ id: "thirdweb:a2" })],
       totalCount: 3,
       page: 2,
       pageSize: 1,
       errors: [],
+      facets: {
+        providerCounts: {
+          coinbase: 2,
+          thirdweb: 1,
+        },
+        categoryCounts: {
+          general: 2,
+          tools: 1,
+        },
+        tagCounts: {
+          "dev-tools": 2,
+          utility: 1,
+          vision: 2,
+        },
+      },
     });
+  });
+
+  it("keeps facets stable across pages", async () => {
+    const searchAll = vi.fn().mockResolvedValue({
+      results: [
+        createAgent("coinbase:a1", {
+          category: "General",
+          tags: ["Utility"],
+        }),
+        createAgent("thirdweb:a2", {
+          category: "Tools",
+          tags: ["Vision"],
+        }),
+        createAgent("payai:a3", {
+          category: "General",
+          tags: ["Vision", "NLP"],
+        }),
+      ],
+      errors: [],
+    });
+
+    __setRegistryFactoryForTests(() => ({
+      searchAll,
+    }));
+
+    const pageOneResponse = await GET(createRequest("?page=1&pageSize=1"));
+    const pageTwoResponse = await GET(createRequest("?page=2&pageSize=1"));
+    const pageOnePayload = await pageOneResponse.json();
+    const pageTwoPayload = await pageTwoResponse.json();
+
+    expect(pageOnePayload.results[0].id).toBe("coinbase:a1");
+    expect(pageTwoPayload.results[0].id).toBe("thirdweb:a2");
+    expect(pageOnePayload.facets).toEqual({
+      providerCounts: {
+        coinbase: 1,
+        payai: 1,
+        thirdweb: 1,
+      },
+      categoryCounts: {
+        general: 2,
+        tools: 1,
+      },
+      tagCounts: {
+        nlp: 1,
+        utility: 1,
+        vision: 2,
+      },
+    });
+    expect(pageTwoPayload.facets).toEqual(pageOnePayload.facets);
   });
 
   it("returns 200 with errors field when partial upstream failures happen", async () => {
