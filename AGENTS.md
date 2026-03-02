@@ -39,6 +39,7 @@ Use `pnpm` (lockfile: `pnpm-lock.yaml`).
 - `ProviderAdapter.search()` / `getById()` should return normalized `UnifiedAgent` objects; provider-specific raw payload types stay internal to each adapter.
 - Canonical `SearchFilters.sort` values are `price_asc`, `price_desc`, `relevance`, and `availability`.
 - Registry aggregation should return partial successes with `{ results, errors }` instead of throwing when one upstream provider fails.
+- `GET /api/store/search` facets (`providerCounts`/`categoryCounts`/`tagCounts`) must be computed from pre-pagination aggregated results; facet keys should be normalized with `trim().toLowerCase()` and emitted in stable key order.
 
 ## Commit & Pull Request Guidelines
 

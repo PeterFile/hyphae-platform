@@ -7,12 +7,19 @@ import {
 import type { ProviderError, SearchFilters } from "@/lib/providers/types";
 import type { UnifiedAgent } from "@/lib/unified-schema";
 
+export type SearchFacets = {
+  providerCounts: Record<string, number>;
+  categoryCounts: Record<string, number>;
+  tagCounts?: Record<string, number>;
+};
+
 export type SearchResponse = {
   results: UnifiedAgent[];
   totalCount: number;
   page: number;
   pageSize: number;
   errors: ProviderError[];
+  facets?: SearchFacets;
 };
 
 function buildSearchParams(filters: SearchFilters): URLSearchParams {
@@ -72,6 +79,7 @@ export function useUnifiedSearch(filters: SearchFilters = {}) {
     agents: query.data?.results ?? [],
     totalCount: query.data?.totalCount ?? 0,
     errors: query.data?.errors ?? [],
+    facets: query.data?.facets,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     fetchNextPage: () => {
@@ -125,11 +133,13 @@ export function useInfiniteUnifiedSearch(
   const agents = query.data?.pages.flatMap((page) => page.results) ?? [];
   const totalCount = query.data?.pages[0]?.totalCount ?? 0;
   const errors = query.data?.pages.flatMap((page) => page.errors) ?? [];
+  const facets = query.data?.pages[0]?.facets;
 
   return {
     agents,
     totalCount,
     errors,
+    facets,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     fetchNextPage: query.fetchNextPage,
