@@ -11,34 +11,39 @@ import { ThirdwebAdapter } from "./thirdweb-adapter";
 const BASE_USDC = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 const PAY_TO = "0x1111111111111111111111111111111111111111";
 
-function buildDiscoveryResponse() {
+function buildDiscoveryItem(index: number) {
   return {
+    resource: `https://api.example.com/paid-api-${index}`,
+    type: "http" as const,
     x402Version: 1,
-    items: [
+    accepts: [
       {
-        resource: "https://api.example.com/paid-api",
-        type: "http" as const,
-        x402Version: 1,
-        accepts: [
-          {
-            scheme: "exact" as const,
-            network: "eip155:8453",
-            maxAmountRequired: "10000",
-            resource: "https://api.example.com/paid-api",
-            description: "Premium weather endpoint",
-            mimeType: "application/json",
-            payTo: PAY_TO,
-            maxTimeoutSeconds: 60,
-            asset: BASE_USDC,
-          },
-        ],
-        lastUpdated: "2026-02-25T12:00:00Z",
+        scheme: "exact" as const,
+        network: "eip155:8453",
+        maxAmountRequired: "10000",
+        resource: `https://api.example.com/paid-api-${index}`,
+        description: "Premium weather endpoint",
+        mimeType: "application/json",
+        payTo: PAY_TO,
+        maxTimeoutSeconds: 60,
+        asset: BASE_USDC,
       },
     ],
+    lastUpdated: "2026-02-25T12:00:00Z",
+  };
+}
+
+function buildDiscoveryResponse(
+  items = [buildDiscoveryItem(1)],
+  pagination: { limit?: number; offset?: number; total?: number } = {}
+) {
+  return {
+    x402Version: 1,
+    items,
     pagination: {
-      limit: 20,
-      offset: 0,
-      total: 1,
+      limit: pagination.limit ?? 20,
+      offset: pagination.offset ?? 0,
+      total: pagination.total ?? items.length,
     },
   };
 }
@@ -94,6 +99,75 @@ describe("ThirdwebAdapter", () => {
     const originalId = fullId.replace("thirdweb:", "");
     expect(await adapter.getById(fullId)).toEqual(result[0]);
     expect(await adapter.getById(originalId)).toEqual(result[0]);
+  });
+
+  it("auto-paginates when page/pageSize are missing", async () => {
+    const total = 45;
+    const fetchMock = vi.fn(async (requestUrl: string) => {
+      const parsedUrl = new URL(requestUrl);
+      const offset = Number(parsedUrl.searchParams.get("offset") ?? "0");
+      const limit = Number(parsedUrl.searchParams.get("limit") ?? "20");
+      const count = Math.max(0, Math.min(limit, total - offset));
+
+      const items = Array.from({ length: count }, (_, itemIndex) =>
+        buildDiscoveryItem(offset + itemIndex + 1)
+      );
+
+      return new Response(
+        JSON.stringify(
+          buildDiscoveryResponse(items, {
+            limit,
+            offset,
+            total,
+          })
+        )
+      );
+    });
+    const adapter = new ThirdwebAdapter({
+      secretKey: "sk_test_123",
+      fetchFn: fetchMock,
+    });
+
+    const result = await adapter.search("weather");
+
+    expect(result).toHaveLength(45);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(
+      fetchMock.mock.calls.map(([requestUrl]) =>
+        new URL(requestUrl as string).searchParams.get("offset")
+      )
+    ).toEqual(["0", "20", "40"]);
+  });
+
+  it("caps auto-pagination to avoid unbounded fetches", async () => {
+    const fetchMock = vi.fn(async (requestUrl: string) => {
+      const parsedUrl = new URL(requestUrl);
+      const offset = Number(parsedUrl.searchParams.get("offset") ?? "0");
+      const limit = Number(parsedUrl.searchParams.get("limit") ?? "20");
+
+      const items = Array.from({ length: limit }, (_, itemIndex) =>
+        buildDiscoveryItem(offset + itemIndex + 1)
+      );
+
+      return new Response(
+        JSON.stringify(
+          buildDiscoveryResponse(items, {
+            limit,
+            offset,
+            total: 10_000,
+          })
+        )
+      );
+    });
+    const adapter = new ThirdwebAdapter({
+      secretKey: "sk_test_123",
+      fetchFn: fetchMock,
+    });
+
+    const result = await adapter.search("weather");
+
+    expect(result).toHaveLength(200);
+    expect(fetchMock).toHaveBeenCalledTimes(10);
   });
 
   it("getById() hydrates cache from discovery when cache is empty", async () => {
@@ -173,13 +247,13 @@ describe("ThirdwebAdapter", () => {
     expect(unified.availability.statusCode).toBe(0);
   });
 
-  it("returns empty array and records error when secret key is missing", async () => {
+  it("throws when secret key is missing so upstream can collect provider errors", async () => {
     const fetchMock = vi.fn();
     const adapter = new ThirdwebAdapter({ fetchFn: fetchMock });
 
-    const result = await adapter.search("weather");
-
-    expect(result).toEqual([]);
+    await expect(adapter.search("weather")).rejects.toThrow(
+      "THIRDWEB_SECRET_KEY is missing"
+    );
     expect(fetchMock).not.toHaveBeenCalled();
     expect(adapter.lastError).toContain("THIRDWEB_SECRET_KEY");
     expect(adapter.getErrors()).toHaveLength(1);
