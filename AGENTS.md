@@ -58,6 +58,7 @@ Use `pnpm` (lockfile: `pnpm-lock.yaml`).
 ## Provider Adapter Conventions
 
 - Dexter marketplace records currently do not provide a stable explicit id; use `encodeURIComponent(resourceUrl)` as `originalId` and `dexter:${originalId}` as unified id.
+- Store detail route `src/app/store/[provider]/[id]/page.tsx` must treat `params.id` as opaque and pass it directly to `getById()`; do not run an extra `decodeURIComponent`, or Dexter ids can mismatch.
 - For best-effort providers, keep API failures non-fatal: retry once, then return mock fallback data with explicit metadata markers so downstream layers can surface degraded mode.
 - Thirdweb `getById()` should cold-start hydrate discovery cache, but discovery is still paginated; keep `/api/store/invoke` fail-fast with `provider_not_invokable_yet` until lookup stability is guaranteed without pagination misses.
 

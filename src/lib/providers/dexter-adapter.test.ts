@@ -57,51 +57,54 @@ describe("DexterAdapter", () => {
     expect(first.metadata?.rating).toBe(4.6);
   });
 
-  it("getById() expects unified dexter id and returns matched agent", async () => {
+  it("getById() accepts dexter unified id and raw resource URL", async () => {
     const primaryUrl = "https://x402.dexter.cash/api/jupiter/quote";
     const secondaryUrl = "https://x402.dexter.cash/api/tools/solscan/trending";
-    const fetchMock = vi.fn().mockResolvedValue(
-      createApiResponse([
-        {
-          resourceUrl: primaryUrl,
-          displayName: "Primary",
-          description: "Primary record",
-          category: "Tools",
-          method: "GET",
-          priceAtomic: "50000",
-          priceUsdc: 0.05,
-          priceAsset: "USDC",
-          priceNetwork: "solana",
-          verificationStatus: "pass",
-          lastVerifiedAt: "2026-02-24T17:49:35.121Z",
-        },
-        {
-          resourceUrl: secondaryUrl,
-          displayName: "Secondary",
-          description: "Secondary record",
-          category: "Data",
-          method: "POST",
-          priceAtomic: "100000",
-          priceUsdc: 0.1,
-          priceAsset: "USDC",
-          priceNetwork: "solana",
-          verificationStatus: "pass",
-          lastVerifiedAt: "2026-02-24T17:49:35.121Z",
-        },
-      ])
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        createApiResponse([
+          {
+            resourceUrl: primaryUrl,
+            displayName: "Primary",
+            description: "Primary record",
+            category: "Tools",
+            method: "GET",
+            priceAtomic: "50000",
+            priceUsdc: 0.05,
+            priceAsset: "USDC",
+            priceNetwork: "solana",
+            verificationStatus: "pass",
+            lastVerifiedAt: "2026-02-24T17:49:35.121Z",
+          },
+          {
+            resourceUrl: secondaryUrl,
+            displayName: "Secondary",
+            description: "Secondary record",
+            category: "Data",
+            method: "POST",
+            priceAtomic: "100000",
+            priceUsdc: 0.1,
+            priceAsset: "USDC",
+            priceNetwork: "solana",
+            verificationStatus: "pass",
+            lastVerifiedAt: "2026-02-24T17:49:35.121Z",
+          },
+        ])
+      )
     );
 
     const adapter = new DexterAdapter({ fetchFn: fetchMock });
     const hit = await adapter.getById(
       `dexter:${encodeURIComponent(secondaryUrl)}`
     );
-    const miss = await adapter.getById(
+    const rawHit = await adapter.getById(
       "https://x402.dexter.cash/api/tools/solscan/trending"
     );
 
     expect(hit?.provider).toBe("dexter");
     expect(hit?.name).toBe("Secondary");
-    expect(miss).toBeNull();
+    expect(rawHit?.provider).toBe("dexter");
+    expect(rawHit?.name).toBe("Secondary");
   });
 
   it("falls back to mock data and marks metadata when API is unavailable", async () => {

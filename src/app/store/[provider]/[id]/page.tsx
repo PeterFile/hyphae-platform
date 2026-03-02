@@ -43,8 +43,7 @@ const getAgent = cache(async (provider: string, id: string) => {
   }
   const adapter = getAdapter(parsedProvider.data);
   if (!adapter) return null;
-  // params.id arrives URL-encoded from Next.js routing; decode before lookup.
-  return adapter.getById(decodeURIComponent(id));
+  return adapter.getById(id);
 });
 
 export async function generateMetadata(props: {
