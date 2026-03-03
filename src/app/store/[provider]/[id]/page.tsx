@@ -20,6 +20,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { buildInvokeParameterDocs } from "@/lib/invoke-parameter-docs";
 
 const getAdapter = (providerName: string) => {
   switch (providerName) {
@@ -73,6 +82,11 @@ export default async function AgentDetailPage(props: {
   if (!agent) {
     notFound();
   }
+
+  const invokeDocs = buildInvokeParameterDocs({
+    agentId: agent.id,
+    endpointMethod: agent.endpoint.method,
+  });
 
   return (
     <div className="container mx-auto py-8">
@@ -138,6 +152,68 @@ export default async function AgentDetailPage(props: {
   ${agent.endpoint.url} \\
   -H "Content-Type: application/json"`}
                     </code>
+                  </pre>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Invoke Parameters Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Invoke Parameters</CardTitle>
+              <CardDescription>
+                Request contract for POST /api/store/invoke
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <ul className="list-disc space-y-1 pl-4 text-sm text-muted-foreground">
+                {invokeDocs.transportNotes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Field</TableHead>
+                    <TableHead>Required</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Description</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {invokeDocs.fields.map((field) => (
+                    <TableRow key={field.name}>
+                      <TableCell className="font-mono text-xs md:text-sm">
+                        {field.name}
+                      </TableCell>
+                      <TableCell>{field.required ? "Yes" : "No"}</TableCell>
+                      <TableCell className="font-mono text-xs md:text-sm">
+                        {field.type}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {field.description}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div>
+                  <h4 className="mb-2 text-sm font-medium">Invoke Example</h4>
+                  <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-sm">
+                    <code>{invokeDocs.invokeExampleJson}</code>
+                  </pre>
+                </div>
+
+                <div>
+                  <h4 className="mb-2 text-sm font-medium">
+                    402 Retry Example
+                  </h4>
+                  <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-sm">
+                    <code>{invokeDocs.retryExampleJson}</code>
                   </pre>
                 </div>
               </div>
