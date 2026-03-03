@@ -2,7 +2,6 @@ import type {
   AgentInputSchema,
   AgentInputProperty,
 } from "@/lib/unified-schema";
-
 type EndpointMethod = "GET" | "POST";
 
 export type InvokeParameterDocField = {
