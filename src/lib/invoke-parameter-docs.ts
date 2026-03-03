@@ -1,3 +1,8 @@
+import type {
+  AgentInputSchema,
+  AgentInputProperty,
+} from "@/lib/unified-schema";
+
 type EndpointMethod = "GET" | "POST";
 
 export type InvokeParameterDocField = {
@@ -37,11 +42,95 @@ function getInputExample(
   };
 }
 
+function getPropertyExampleValue(property: AgentInputProperty): unknown {
+  if (property.example !== undefined) {
+    return property.example;
+  }
+
+  switch (property.type) {
+    case "string":
+      return "example";
+    case "number":
+    case "integer":
+      return 1;
+    case "boolean":
+      return true;
+    case "array":
+      return [];
+    case "object":
+      return {};
+    default:
+      return null;
+  }
+}
+
+function buildStructuredInputFields(
+  inputSchema: AgentInputSchema | undefined
+): InvokeParameterDocField[] {
+  if (!inputSchema) {
+    return [];
+  }
+
+  const names = Object.keys(inputSchema.properties).sort();
+  if (names.length === 0) {
+    return [];
+  }
+
+  const requiredSet = new Set(inputSchema.required);
+
+  return names.map((name) => {
+    const property = inputSchema.properties[name];
+    const enumSuffix =
+      property.enum && property.enum.length > 0
+        ? ` Allowed values: ${property.enum.join(", ")}.`
+        : "";
+    const description = property.description ?? "No description provided.";
+
+    return {
+      name: `input.${name}`,
+      required: requiredSet.has(name),
+      type: property.type,
+      description: `${description}${enumSuffix}`,
+    };
+  });
+}
+
+function buildInputExample(
+  endpointMethod: EndpointMethod,
+  inputSchema?: AgentInputSchema
+): Record<string, unknown> {
+  if (!inputSchema) {
+    return getInputExample(endpointMethod);
+  }
+
+  if (inputSchema.example) {
+    return inputSchema.example;
+  }
+
+  const propertyEntries = Object.entries(inputSchema.properties);
+  if (propertyEntries.length === 0) {
+    return getInputExample(endpointMethod);
+  }
+
+  return Object.fromEntries(
+    propertyEntries.map(([name, property]) => [
+      name,
+      getPropertyExampleValue(property),
+    ])
+  );
+}
+
 export function buildInvokeParameterDocs(input: {
   agentId: string;
   endpointMethod: EndpointMethod;
+  inputSchema?: AgentInputSchema;
 }): InvokeParameterDocs {
-  const inputExample = getInputExample(input.endpointMethod);
+  const inputExample = buildInputExample(
+    input.endpointMethod,
+    input.inputSchema
+  );
+  const structuredInputFields = buildStructuredInputFields(input.inputSchema);
+  const hasStructuredInputFields = structuredInputFields.length > 0;
 
   const fields: InvokeParameterDocField[] = [
     {
@@ -55,8 +144,11 @@ export function buildInvokeParameterDocs(input: {
       name: "input",
       required: false,
       type: "object",
-      description: getInputDescription(input.endpointMethod),
+      description: hasStructuredInputFields
+        ? "Optional structured object. See input.* fields below."
+        : getInputDescription(input.endpointMethod),
     },
+    ...structuredInputFields,
     {
       name: "payment",
       required: false,

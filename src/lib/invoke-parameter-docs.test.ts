@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildInvokeParameterDocs } from "@/lib/invoke-parameter-docs";
+import type { AgentInputSchema } from "@/lib/unified-schema";
 
 describe("buildInvokeParameterDocs", () => {
   it("documents POST input as JSON body and keeps id in examples", () => {
@@ -52,5 +53,49 @@ describe("buildInvokeParameterDocs", () => {
       };
     };
     expect(retryExample.payment?.headerName).toBe("X-PAYMENT");
+  });
+
+  it("expands structured inputSchema fields into input.* rows", () => {
+    const inputSchema: AgentInputSchema = {
+      type: "object",
+      properties: {
+        city: {
+          type: "string",
+          description: "City name",
+        },
+        days: {
+          type: "integer",
+          description: "Forecast days",
+          example: 3,
+        },
+      },
+      required: ["city"],
+      additionalProperties: false,
+      example: {
+        city: "Shanghai",
+        days: 3,
+      },
+    };
+    const docs = buildInvokeParameterDocs({
+      agentId: "coinbase:weather-agent",
+      endpointMethod: "POST",
+      inputSchema,
+    });
+
+    const cityField = docs.fields.find((field) => field.name === "input.city");
+    const daysField = docs.fields.find((field) => field.name === "input.days");
+    expect(cityField?.required).toBe(true);
+    expect(cityField?.type).toBe("string");
+    expect(cityField?.description).toContain("City name");
+    expect(daysField?.required).toBe(false);
+    expect(daysField?.type).toBe("integer");
+
+    const invokeExample = JSON.parse(docs.invokeExampleJson) as {
+      input: Record<string, unknown>;
+    };
+    expect(invokeExample.input).toMatchObject({
+      city: "Shanghai",
+      days: 3,
+    });
   });
 });

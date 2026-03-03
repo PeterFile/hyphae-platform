@@ -86,6 +86,7 @@ export default async function AgentDetailPage(props: {
   const invokeDocs = buildInvokeParameterDocs({
     agentId: agent.id,
     endpointMethod: agent.endpoint.method,
+    inputSchema: agent.inputSchema,
   });
 
   return (

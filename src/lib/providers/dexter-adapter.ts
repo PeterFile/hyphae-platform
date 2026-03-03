@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import { checkEndpoint } from "@/lib/availability-checker";
 import { normalizeToUsdcCents } from "@/lib/price-normalizer";
-import { UnifiedAgentSchema, type UnifiedAgent } from "@/lib/unified-schema";
+import {
+  UnifiedAgentSchema,
+  createOpenInputSchema,
+  type UnifiedAgent,
+} from "@/lib/unified-schema";
 
 import type {
   AvailabilityResult,
@@ -281,6 +285,7 @@ export class DexterAdapter implements ProviderAdapter {
       context.source === "mock-fallback"
         ? (context.note ?? FALLBACK_NOTE)
         : undefined;
+    const method = normalizeMethod(resource.method);
 
     return UnifiedAgentSchema.parse({
       id: unifiedId,
@@ -301,8 +306,9 @@ export class DexterAdapter implements ProviderAdapter {
           : [],
       endpoint: {
         url: resource.resourceUrl,
-        method: normalizeMethod(resource.method),
+        method,
       },
+      inputSchema: createOpenInputSchema(method),
       pricing: price,
       availability: {
         isOnline: resource.verificationStatus?.toLowerCase() === "pass",

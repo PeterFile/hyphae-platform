@@ -5,7 +5,11 @@ import type {
   ProviderAdapter,
   SearchFilters,
 } from "@/lib/providers/types";
-import { UnifiedAgentSchema, type UnifiedAgent } from "@/lib/unified-schema";
+import {
+  UnifiedAgentSchema,
+  createOpenInputSchema,
+  type UnifiedAgent,
+} from "@/lib/unified-schema";
 
 const DEFAULT_RPC_TIMEOUT_MS = 3000;
 const PAYAI_PROVIDER_PREFIX = "payai:";
@@ -183,6 +187,7 @@ export class PayAIAdapter implements ProviderAdapter {
         url: rawAgent.endpointUrl,
         method: "GET",
       },
+      inputSchema: createOpenInputSchema("GET"),
       pricing: {
         amountUsdcCents,
         rawAmount: rawAgent.rawAmount,
