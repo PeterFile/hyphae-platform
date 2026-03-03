@@ -12,6 +12,7 @@ import { PayAIAdapter } from "@/lib/providers/payai-adapter";
 import { ProviderBadge } from "@/components/store/provider-badge";
 import { RealtimeAvailability } from "./realtime-availability";
 import { AgentPlayground } from "@/components/store/agent-playground";
+import { CopyBlock } from "@/components/ui/copy-block";
 import {
   Card,
   CardContent,
@@ -147,13 +148,9 @@ export default async function AgentDetailPage(props: {
                 </div>
                 <div>
                   <h4 className="mb-2 text-sm font-medium">Example Use</h4>
-                  <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-sm">
-                    <code>
-                      {`curl -X ${agent.endpoint.method} \\
-  ${agent.endpoint.url} \\
-  -H "Content-Type: application/json"`}
-                    </code>
-                  </pre>
+                  <CopyBlock
+                    text={`curl -X ${agent.endpoint.method} \\\n  ${agent.endpoint.url} \\\n  -H "Content-Type: application/json"`}
+                  />
                 </div>
               </div>
             </CardContent>
@@ -204,18 +201,14 @@ export default async function AgentDetailPage(props: {
               <div className="grid gap-4 lg:grid-cols-2">
                 <div>
                   <h4 className="mb-2 text-sm font-medium">Invoke Example</h4>
-                  <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-sm">
-                    <code>{invokeDocs.invokeExampleJson}</code>
-                  </pre>
+                  <CopyBlock text={invokeDocs.invokeExampleJson} />
                 </div>
 
                 <div>
                   <h4 className="mb-2 text-sm font-medium">
                     402 Retry Example
                   </h4>
-                  <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-sm">
-                    <code>{invokeDocs.retryExampleJson}</code>
-                  </pre>
+                  <CopyBlock text={invokeDocs.retryExampleJson} />
                 </div>
               </div>
             </CardContent>
