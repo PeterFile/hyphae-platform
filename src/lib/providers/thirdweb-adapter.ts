@@ -1,6 +1,10 @@
 import { checkEndpoint } from "@/lib/availability-checker";
 import { normalizeToUsdcCents } from "@/lib/price-normalizer";
-import { UnifiedAgentSchema, type UnifiedAgent } from "@/lib/unified-schema";
+import {
+  UnifiedAgentSchema,
+  createOpenInputSchema,
+  type UnifiedAgent,
+} from "@/lib/unified-schema";
 
 import type {
   AvailabilityResult,
@@ -367,6 +371,7 @@ export class ThirdwebAdapter implements ProviderAdapter {
     const rawAsset = normalizeAssetForPricing(accepts?.asset ?? "USDC");
     const pricing = normalizeToUsdcCents(rawAmount, rawAsset, network);
     const fallbackDescription = `Payable endpoint at ${endpointUrl}`;
+    const method = normalizeMethod(readString(metadata, "method"));
     const nameFromUrl = (() => {
       try {
         return new URL(endpointUrl).hostname;
@@ -388,8 +393,9 @@ export class ThirdwebAdapter implements ProviderAdapter {
       tags: toTags(metadata?.tags),
       endpoint: {
         url: endpointUrl,
-        method: normalizeMethod(readString(metadata, "method")),
+        method,
       },
+      inputSchema: createOpenInputSchema(method),
       pricing: {
         amountUsdcCents: pricing.amountUsdcCents,
         rawAmount,
@@ -432,6 +438,7 @@ export class ThirdwebAdapter implements ProviderAdapter {
         url: `${DEFAULT_UNKNOWN_ENDPOINT}/${index + 1}`,
         method: "GET",
       },
+      inputSchema: createOpenInputSchema("GET"),
       pricing: {
         amountUsdcCents: 0,
         rawAmount: "0",

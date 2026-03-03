@@ -123,4 +123,90 @@ describe("UnifiedAgentSchema", () => {
 
     expect(result.success).toBe(false);
   });
+
+  test("parses structured inputSchema and preserves required fields", () => {
+    const parsed = UnifiedAgentSchema.parse({
+      id: "coinbase:cb-003",
+      provider: "coinbase",
+      originalId: "cb-003",
+      name: "Input Schema Agent",
+      description: "Has structured input schema.",
+      endpoint: {
+        url: "https://api.example.com/invoke",
+        method: "POST",
+      },
+      pricing: {
+        amountUsdcCents: 50,
+        rawAmount: "500000",
+        rawAsset: "USDC",
+        network: "base",
+      },
+      availability: {
+        isOnline: true,
+        lastChecked: "2026-02-25T02:29:24Z",
+        statusCode: 200,
+      },
+      inputSchema: {
+        type: "object",
+        description: "Invocation payload",
+        properties: {
+          city: {
+            type: "string",
+            description: "City name",
+          },
+          days: {
+            type: "integer",
+            description: "Forecast days",
+            example: 3,
+          },
+        },
+        required: ["city"],
+        additionalProperties: false,
+        example: {
+          city: "Shanghai",
+          days: 3,
+        },
+      },
+    });
+
+    expect(parsed.inputSchema?.type).toBe("object");
+    expect(parsed.inputSchema?.required).toEqual(["city"]);
+    expect(parsed.inputSchema?.properties.city?.type).toBe("string");
+  });
+
+  test("rejects inputSchema.required entries missing in properties", () => {
+    const result = UnifiedAgentSchema.safeParse({
+      id: "coinbase:cb-004",
+      provider: "coinbase",
+      originalId: "cb-004",
+      name: "Bad Input Schema Agent",
+      description: "Invalid input schema.",
+      endpoint: {
+        url: "https://api.example.com/invoke",
+        method: "POST",
+      },
+      pricing: {
+        amountUsdcCents: 50,
+        rawAmount: "500000",
+        rawAsset: "USDC",
+        network: "base",
+      },
+      availability: {
+        isOnline: true,
+        lastChecked: "2026-02-25T02:29:24Z",
+        statusCode: 200,
+      },
+      inputSchema: {
+        type: "object",
+        properties: {
+          city: {
+            type: "string",
+          },
+        },
+        required: ["country"],
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
 });

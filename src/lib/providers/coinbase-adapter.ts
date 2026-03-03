@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import { checkEndpoint } from "@/lib/availability-checker";
 import { normalizeToUsdcCents } from "@/lib/price-normalizer";
-import { UnifiedAgentSchema, type UnifiedAgent } from "@/lib/unified-schema";
+import {
+  UnifiedAgentSchema,
+  createOpenInputSchema,
+  type UnifiedAgent,
+} from "@/lib/unified-schema";
 
 import type {
   AvailabilityResult,
@@ -528,6 +532,7 @@ export class CoinbaseAdapter implements ProviderAdapter {
         url: resource.resource,
         method,
       },
+      inputSchema: createOpenInputSchema(method),
       pricing: {
         amountUsdcCents: normalizedPrice.amountUsdcCents,
         rawAmount,
