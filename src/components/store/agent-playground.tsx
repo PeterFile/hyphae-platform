@@ -7,6 +7,8 @@ import {
   CheckCircle2,
   AlertCircle,
   KeySquare,
+  X,
+  Terminal,
 } from "lucide-react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 
@@ -130,6 +132,7 @@ function AgentPlaygroundCore({
   const [uiState, setUiState] = useState<UIState>("IDLE");
   const [requestBody, setRequestBody] = useState("{\n  \n}");
   const [responseLog, setResponseLog] = useState<string>("");
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
 
   const appendLog = (message: string, isError = false) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -153,6 +156,7 @@ function AgentPlaygroundCore({
 
       setUiState("REQUESTING");
       clearLog();
+      setIsTerminalOpen(true);
 
       const targetUrl = agent.endpoint.url;
       appendLog(
@@ -308,7 +312,7 @@ function AgentPlaygroundCore({
 
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col">
-      <div className="flex flex-col space-y-1.5 p-6 border-b bg-muted/30">
+      <div className="flex flex-col space-y-1.5 p-6 border-b bg-muted/30 relative">
         <h3 className="font-semibold leading-none tracking-tight flex items-center gap-2">
           <Play className="h-4 w-4 text-primary" />
           Interactive Test Workspace
@@ -318,9 +322,20 @@ function AgentPlaygroundCore({
             ? "Wallet-Signed X402 Flow (Privy Wallet Only)"
             : "Auto X402 Flow Demonstration (Burner Wallet Fallback)"}
         </p>
+        {!isTerminalOpen && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="absolute right-6 top-6"
+            onClick={() => setIsTerminalOpen(true)}
+          >
+            <Terminal className="h-4 w-4 mr-2" />
+            Show Terminal
+          </Button>
+        )}
       </div>
 
-      <div className="p-6 grid gap-6 md:grid-cols-2">
+      <div className="p-6">
         <div className="space-y-4 flex flex-col h-full">
           <div>
             <label className="text-sm font-medium mb-1.5 block">
@@ -373,16 +388,28 @@ function AgentPlaygroundCore({
             </Button>
           </div>
         </div>
+      </div>
 
-        <div className="bg-black/95 rounded-lg border flex flex-col overflow-hidden relative group h-[300px] md:h-auto">
-          <div className="absolute top-0 w-full flex justify-between px-3 py-1.5 bg-zinc-900 border-b border-zinc-800 text-xs text-zinc-400 font-mono z-10">
-            <span>Terminal &gt; _</span>
-            {uiState === "SUCCESS" && (
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-            )}
+      {isTerminalOpen && (
+        <div className="fixed bottom-6 right-6 w-[800px] max-w-[90vw] h-[600px] max-h-[85vh] bg-black/95 rounded-lg border shadow-2xl flex flex-col overflow-hidden z-50 animate-in slide-in-from-bottom-8 fade-in duration-300">
+          <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
+            <div className="text-xs text-zinc-400 font-mono flex items-center gap-2">
+              <span>Terminal &gt; _</span>
+              {uiState === "SUCCESS" && (
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
+              onClick={() => setIsTerminalOpen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
 
-          <div className="flex-1 p-4 pt-10 overflow-auto font-mono text-sm text-zinc-300 whitespace-pre-wrap">
+          <div className="flex-1 p-4 overflow-auto font-mono text-sm text-zinc-300 whitespace-pre-wrap relative">
             {responseLog || (
               <span className="text-zinc-600 italic">
                 Waiting to invoke agent logic...
@@ -410,7 +437,7 @@ function AgentPlaygroundCore({
             </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 }
