@@ -324,4 +324,127 @@ describe("ThirdwebAdapter", () => {
       statusCode: 0,
     });
   });
+
+  it("uses accepts description as name when metadata.name is missing", () => {
+    const adapter = new ThirdwebAdapter({ secretKey: "sk_test_123" });
+
+    const unified = adapter.normalize(
+      {
+        resource: "https://coinrailz.com/api",
+        type: "http",
+        x402Version: 1,
+        accepts: [
+          {
+            scheme: "exact" as const,
+            network: "eip155:8453",
+            maxAmountRequired: "10000",
+            resource: "https://coinrailz.com/api",
+            description: "Coin Railz x402 Micropayment Services",
+            mimeType: "application/json",
+            payTo: PAY_TO,
+            maxTimeoutSeconds: 60,
+            asset: BASE_USDC,
+          },
+        ],
+        lastUpdated: "2026-02-25T12:00:00Z",
+      },
+      0
+    );
+
+    expect(unified.name).toBe("Coin Railz x402 Micropayment Services");
+  });
+
+  it("prefers metadata.name over accepts description", () => {
+    const adapter = new ThirdwebAdapter({ secretKey: "sk_test_123" });
+
+    const unified = adapter.normalize(
+      {
+        resource: "https://coinrailz.com/api",
+        type: "http",
+        x402Version: 1,
+        accepts: [
+          {
+            scheme: "exact" as const,
+            network: "eip155:8453",
+            maxAmountRequired: "10000",
+            resource: "https://coinrailz.com/api",
+            description: "Coin Railz x402 Micropayment Services",
+            mimeType: "application/json",
+            payTo: PAY_TO,
+            maxTimeoutSeconds: 60,
+            asset: BASE_USDC,
+          },
+        ],
+        lastUpdated: "2026-02-25T12:00:00Z",
+        metadata: { name: "My Custom Agent" },
+      },
+      0
+    );
+
+    expect(unified.name).toBe("My Custom Agent");
+  });
+
+  it("strips URLs and HTTP methods from description when used as name", () => {
+    const adapter = new ThirdwebAdapter({ secretKey: "sk_test_123" });
+
+    const unified = adapter.normalize(
+      {
+        resource: "https://example.com/api",
+        type: "http",
+        x402Version: 1,
+        accepts: [
+          {
+            scheme: "exact" as const,
+            network: "eip155:8453",
+            maxAmountRequired: "10000",
+            resource: "https://example.com/api",
+            description:
+              "Nice project https://nexus.thirdweb.com/routes/31 - GET WeatherData",
+            mimeType: "application/json",
+            payTo: PAY_TO,
+            maxTimeoutSeconds: 60,
+            asset: BASE_USDC,
+          },
+        ],
+        lastUpdated: "2026-02-25T12:00:00Z",
+      },
+      0
+    );
+
+    expect(unified.name).not.toContain("https://");
+    expect(unified.name).not.toMatch(/\bGET\b/);
+    expect(unified.name).toContain("Nice project");
+    expect(unified.name).toContain("WeatherData");
+  });
+
+  it("truncates very long descriptions used as name", () => {
+    const adapter = new ThirdwebAdapter({ secretKey: "sk_test_123" });
+    const longDesc = "A".repeat(100);
+
+    const unified = adapter.normalize(
+      {
+        resource: "https://example.com/api",
+        type: "http",
+        x402Version: 1,
+        accepts: [
+          {
+            scheme: "exact" as const,
+            network: "eip155:8453",
+            maxAmountRequired: "10000",
+            resource: "https://example.com/api",
+            description: longDesc,
+            mimeType: "application/json",
+            payTo: PAY_TO,
+            maxTimeoutSeconds: 60,
+            asset: BASE_USDC,
+          },
+        ],
+        lastUpdated: "2026-02-25T12:00:00Z",
+      },
+      0
+    );
+
+    expect(unified.name.length).toBeLessThanOrEqual(60);
+    expect(unified.name).toContain("…");
+  });
 });

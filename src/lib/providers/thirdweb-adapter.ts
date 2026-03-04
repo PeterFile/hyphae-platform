@@ -200,6 +200,25 @@ function normalizeMethod(value: string | undefined): "GET" | "POST" {
   return value?.toUpperCase() === "POST" ? "POST" : "GET";
 }
 
+const MAX_SHORT_NAME_LENGTH = 60;
+const MIN_SHORT_NAME_LENGTH = 3;
+
+// Extract a human-readable short name from a description string
+function extractShortName(raw: string | undefined): string | undefined {
+  if (!raw || raw.trim().length === 0) return undefined;
+
+  const cleaned = raw
+    .replace(/https?:\/\/[^\s]+/g, "") // strip URLs
+    .replace(/\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b/g, "") // strip HTTP methods
+    .replace(/[\s-]+/g, " ") // collapse whitespace
+    .trim();
+
+  if (cleaned.length < MIN_SHORT_NAME_LENGTH) return undefined;
+
+  if (cleaned.length <= MAX_SHORT_NAME_LENGTH) return cleaned;
+  return cleaned.slice(0, MAX_SHORT_NAME_LENGTH - 1).trimEnd() + "…";
+}
+
 function sanitizeId(value: string): string {
   const normalized = value
     .toLowerCase()
@@ -384,7 +403,10 @@ export class ThirdwebAdapter implements ProviderAdapter {
       id: `thirdweb:${originalId}`,
       provider: "thirdweb" as const,
       originalId,
-      name: readString(metadata, "name") ?? `Nexus Resource: ${nameFromUrl}`,
+      name:
+        readString(metadata, "name") ??
+        extractShortName(accepts?.description) ??
+        `Nexus Resource: ${nameFromUrl}`,
       description:
         accepts?.description ||
         readString(metadata, "description") ||
