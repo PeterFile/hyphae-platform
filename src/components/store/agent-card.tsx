@@ -55,7 +55,10 @@ export function AgentCard({ agent, availabilityOverride }: AgentCardProps) {
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  <CardTitle className="text-lg line-clamp-1">
+                  <CardTitle
+                    className="text-lg line-clamp-1"
+                    title={agent.name}
+                  >
                     {agent.name}
                   </CardTitle>
                   <AvailabilityDot isOnline={isOnline} latencyMs={latencyMs} />
